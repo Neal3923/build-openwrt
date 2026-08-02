@@ -9,6 +9,7 @@ class WizardManager {
         this.totalSteps = 4;
         this.config = {
             source: '',
+            repoBranch: '',
             device: '',
             plugins: [],
             customSources: [],
@@ -204,18 +205,59 @@ class WizardManager {
                 description: '国内热门分支，集成大量插件',
                 repo: 'https://github.com/coolsnowwolf/lede',
                 branch: 'master',
+                defaultBranch: 'master',
+                branches: [{ value: 'master', label: 'master' }],
                 recommended: true,
                 stability: '稳定',
                 plugins: '丰富'
             },
             'openwrt-main': {
                 name: 'OpenWrt 官方',
-                description: '最新稳定版本，兼容性最好',
+                description: '官方源码，可选择开发版或稳定版分支',
                 repo: 'https://github.com/openwrt/openwrt',
-                branch: 'openwrt-23.05',
+                branch: 'main',
+                defaultBranch: 'main',
+                branches: [
+                    { value: 'main', label: 'main（开发版）' },
+                    { value: 'openwrt-25.12', label: '25.12（稳定版）' },
+                    { value: 'openwrt-24.10', label: '24.10' },
+                    { value: 'openwrt-23.05', label: '23.05' }
+                ],
                 recommended: true,
                 stability: '高',
                 plugins: '基础'
+            },
+            'immortalwrt-master': {
+                name: 'ImmortalWrt',
+                description: '增强版官方固件，可选择开发版或稳定版分支',
+                repo: 'https://github.com/immortalwrt/immortalwrt',
+                branch: 'master',
+                defaultBranch: 'master',
+                branches: [
+                    { value: 'master', label: 'master（开发版）' },
+                    { value: 'openwrt-25.12', label: '25.12（稳定版）' },
+                    { value: 'openwrt-24.10', label: '24.10' },
+                    { value: 'openwrt-23.05', label: '23.05' }
+                ],
+                recommended: false,
+                stability: '中',
+                plugins: '增强'
+            },
+            'Lienol-master': {
+                name: "Lienol's OpenWrt",
+                description: 'Lienol 源码，可选择多个稳定版分支',
+                repo: 'https://github.com/Lienol/openwrt',
+                branch: '25.12',
+                defaultBranch: '25.12',
+                branches: [
+                    { value: '25.12', label: '25.12（默认）' },
+                    { value: '24.10', label: '24.10' },
+                    { value: '23.05', label: '23.05' },
+                    { value: '19.07', label: '19.07' }
+                ],
+                recommended: false,
+                stability: '中',
+                plugins: '特色'
             }
         };
     }
@@ -421,6 +463,10 @@ class WizardManager {
         Object.entries(this.sourceBranches).forEach(([key, source]) => {
             const isSelected = this.config.source === key;
             const recommendedBadge = source.recommended ? '<span class="recommended-badge">推荐</span>' : '';
+            const branchOptions = this.getSourceBranchOptions(source);
+            const selectedBranch = isSelected && this.config.repoBranch
+                ? this.config.repoBranch
+                : this.getDefaultRepoBranch(source);
 
             html += `
                 <div class="source-option ${isSelected ? 'selected' : ''}" data-source="${key}">
@@ -440,7 +486,11 @@ class WizardManager {
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">分支:</span>
-                            <span class="detail-value">${source.branch}</span>
+                            <select class="source-branch-select" data-source="${key}" aria-label="${source.name} 分支">
+                                ${branchOptions.map(branch => `
+                                    <option value="${branch.value}" ${branch.value === selectedBranch ? 'selected' : ''}>${branch.label}</option>
+                                `).join('')}
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -459,11 +509,14 @@ class WizardManager {
     bindSourceOptionEvents() {
         document.querySelectorAll('.source-option').forEach(card => {
             card.addEventListener('click', (e) => {
-                // 阻止 a、button、input 的默认行为
+                // 交互控件由各自的事件处理器负责，避免点击下拉框时切换分支。
                 if (
                     e.target.tagName === 'A' ||
                     e.target.tagName === 'BUTTON' ||
-                    e.target.tagName === 'INPUT'
+                    e.target.tagName === 'INPUT' ||
+                    e.target.tagName === 'SELECT' ||
+                    e.target.tagName === 'OPTION' ||
+                    e.target.tagName === 'LABEL'
                 ) return;
                 this.selectSource(card.dataset.source);
             });
@@ -473,6 +526,18 @@ class WizardManager {
                 input.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.selectSource(card.dataset.source);
+                });
+            }
+
+            const branchSelect = card.querySelector('.source-branch-select');
+            if (branchSelect) {
+                branchSelect.addEventListener('click', (e) => e.stopPropagation());
+                branchSelect.addEventListener('change', (e) => {
+                    e.stopPropagation();
+                    this.config.source = branchSelect.dataset.source;
+                    this.config.repoBranch = branchSelect.value;
+                    this.renderSourceSelection();
+                    console.log('✅ 选择源码和分支:', this.config.source, this.config.repoBranch);
                 });
             }
         });
@@ -670,8 +735,8 @@ class WizardManager {
                 <h3>📋 配置摘要</h3>
                 <div class="summary-grid">
                     <div class="summary-item">
-                        <div class="summary-label">源码分支</div>
-                        <div class="summary-value">${sourceInfo?.name || '未选择'}</div>
+                        <div class="summary-label">源码仓库 / 分支</div>
+                        <div class="summary-value">${sourceInfo?.name || '未选择'} / ${this.config.repoBranch || '未选择'}</div>
                     </div>
                     <div class="summary-item">
                         <div class="summary-label">目标设备</div>
@@ -719,9 +784,15 @@ class WizardManager {
     // === 选择操作方法 ===
 
     selectSource(sourceKey) {
+        const source = this.sourceBranches[sourceKey];
+        const availableBranches = this.getSourceBranchOptions(source).map(branch => branch.value);
+
+        if (this.config.source !== sourceKey || !availableBranches.includes(this.config.repoBranch)) {
+            this.config.repoBranch = this.getDefaultRepoBranch(source);
+        }
         this.config.source = sourceKey;
         this.renderSourceSelection();
-        console.log('✅ 选择源码:', sourceKey);
+        console.log('✅ 选择源码:', sourceKey, this.config.repoBranch);
     }
 
     selectDevice(deviceKey) {
@@ -750,8 +821,8 @@ class WizardManager {
     async startBuild() {
         try {
             // 验证配置完整性
-            if (!this.config.source) {
-                alert('请先选择源码分支');
+            if (!this.config.source || !this.config.repoBranch) {
+                alert('请先选择源码仓库和分支');
                 return;
             }
 
@@ -793,6 +864,7 @@ class WizardManager {
             // 添加初始日志
             this.addLogEntry('info', '🎯 正在启动智能编译工作流...');
             this.addLogEntry('info', `📋 源码: ${this.sourceBranches[this.config.source]?.name}`);
+            this.addLogEntry('info', `🌿 分支: ${this.config.repoBranch}`);
             this.addLogEntry('info', `🔧 设备: ${this.deviceConfigs[this.config.device]?.name}`);
             this.addLogEntry('info', `📦 插件: ${this.config.plugins.length}个`);
 
@@ -820,6 +892,7 @@ class WizardManager {
         // 确保只触发智能编译工作流
         return {
             source_branch: this.config.source,
+            repo_branch: this.config.repoBranch,
             target_device: this.config.device,
             plugins: this.config.plugins.join(','), // 转换为逗号分隔的字符串
             description: '智能编译工具Web界面触发',
@@ -858,6 +931,7 @@ class WizardManager {
                     event_type: 'web_build',
                     client_payload: {
                         source_branch: buildData.source_branch,
+                        repo_branch: buildData.repo_branch,
                         target_device: buildData.target_device,
                         plugins: buildData.plugins,
                         description: buildData.description,
@@ -1209,7 +1283,8 @@ class WizardManager {
 
         return `确认开始编译？\n\n` +
             `📋 编译配置:\n` +
-            `源码分支: ${sourceInfo?.name || '未知'}\n` +
+            `源码仓库: ${sourceInfo?.name || '未知'}\n` +
+            `实际分支: ${this.config.repoBranch || '未知'}\n` +
             `目标设备: ${deviceInfo?.name || '未知'}\n` +
             `选中插件: ${this.config.plugins.length}个\n` +
             `工作流类型: 智能编译 (smart-build.yml)\n\n` +
@@ -1245,7 +1320,7 @@ class WizardManager {
      */
     showBuildSuccess() {
         this.addLogEntry('success', '🎉 智能编译工作流已成功启动！');
-        this.addLogEntry('info', `📋 配置信息: ${this.sourceBranches[this.config.source]?.name} - ${this.deviceConfigs[this.config.device]?.name}`);
+        this.addLogEntry('info', `📋 配置信息: ${this.sourceBranches[this.config.source]?.name} / ${this.config.repoBranch} - ${this.deviceConfigs[this.config.device]?.name}`);
         this.addLogEntry('info', `🔧 选中插件: ${this.config.plugins.length}个`);
         this.addLogEntry('info', `🕐 提交时间: ${new Date().toLocaleString()}`);
         this.addLogEntry('info', `📝 工作流: smart-build.yml (智能编译模式)`);
@@ -1409,6 +1484,23 @@ class WizardManager {
         }
     }
 
+    getSourceBranchOptions(source) {
+        if (!source) return [];
+
+        const configuredBranches = Array.isArray(source.branches) && source.branches.length > 0
+            ? source.branches
+            : [source.branch || 'master'];
+
+        return configuredBranches.map(branch => typeof branch === 'string'
+            ? { value: branch, label: branch }
+            : branch);
+    }
+
+    getDefaultRepoBranch(source) {
+        const options = this.getSourceBranchOptions(source);
+        return source?.defaultBranch || source?.branch || options[0]?.value || '';
+    }
+
     getPluginDisplayName(pluginKey) {
         // 遍历所有插件配置，找到对应的显示名称
         for (const category of Object.values(this.pluginConfigs)) {
@@ -1480,8 +1572,8 @@ class WizardManager {
     validateCurrentStep() {
         switch (this.currentStep) {
             case 1:
-                if (!this.config.source) {
-                    alert('请选择源码分支');
+                if (!this.config.source || !this.config.repoBranch) {
+                    alert('请选择源码仓库和分支');
                     return false;
                 }
                 break;

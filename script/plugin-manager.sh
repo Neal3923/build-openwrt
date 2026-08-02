@@ -31,9 +31,10 @@ RUNTIME_CONFIG_FILE=""
 
 # 默认feeds配置模板
 declare -A DEFAULT_FEEDS=(
-    ["openwrt-main"]="src-git packages https://git.openwrt.org/feed/packages.git;src-git luci https://git.openwrt.org/project/luci.git;src-git routing https://git.openwrt.org/feed/routing.git;src-git telephony https://git.openwrt.org/feed/telephony.git"
-    ["lede-master"]="src-git packages https://github.com/coolsnowwolf/packages;src-git luci https://github.com/coolsnowwolf/luci;src-git routing https://git.openwrt.org/feed/routing.git;src-git telephony https://git.openwrt.org/feed/telephony.git"
-    ["immortalwrt-master"]="src-git packages https://github.com/immortalwrt/packages.git;src-git luci https://github.com/immortalwrt/luci.git;src-git routing https://git.openwrt.org/feed/routing.git;src-git telephony https://git.openwrt.org/feed/telephony.git"
+    ["openwrt-main"]="src-git packages https://git.openwrt.org/feed/packages.git|src-git luci https://git.openwrt.org/project/luci.git|src-git routing https://git.openwrt.org/feed/routing.git|src-git telephony https://git.openwrt.org/feed/telephony.git"
+    ["lede-master"]="src-git packages https://github.com/coolsnowwolf/packages|src-git luci https://github.com/coolsnowwolf/luci|src-git routing https://git.openwrt.org/feed/routing.git|src-git telephony https://git.openwrt.org/feed/telephony.git"
+    ["immortalwrt-master"]="src-git packages https://github.com/immortalwrt/packages.git|src-git luci https://github.com/immortalwrt/luci.git|src-git routing https://git.openwrt.org/feed/routing.git|src-git telephony https://git.openwrt.org/feed/telephony.git"
+    ["Lienol-master"]="src-git lienol https://github.com/Lienol/openwrt-package.git;main|src-git packages https://github.com/Lienol/openwrt-packages.git;25.12|src-git luci https://github.com/Lienol/openwrt-luci.git;25.12|src-git routing https://github.com/openwrt/routing.git;openwrt-25.12|src-git telephony https://github.com/openwrt/telephony.git;openwrt-25.12"
 )
 
 # 日志函数
@@ -120,7 +121,7 @@ ${CYAN}示例:${NC}
   $0 generate -l "luci-app-ssr-plus,luci-theme-argon" -o plugin.config
   
   # 生成feeds配置 (新增)
-  $0 generate-feeds -l "luci-app-ssr-plus,luci-app-passwall2" -b lede-master -o feeds.conf.default
+  $0 generate-feeds -l "luci-app-ssr-plus,luci-app-passwall" -b lede-master -o feeds.conf.default
   
   # 运行时配置支持 (新增)
   $0 --runtime-config /tmp/runtime.json generate-feeds -l "luci-app-ssr-plus"
@@ -169,7 +170,7 @@ init_plugin_database() {
           "feeds": ["src-git helloworld https://github.com/fw876/helloworld"],
           "feeds_comment": "SSR Plus+ 插件源",
           "dependencies": ["shadowsocksr-libev-ssr-local", "shadowsocksr-libev-ssr-redir"],
-          "conflicts": ["luci-app-passwall", "luci-app-openclash", "luci-app-bypass"],
+          "conflicts": ["luci-app-passwall", "luci-app-openclash"],
           "size": "~2MB",
           "complexity": "medium",
           "priority": 1
@@ -177,26 +178,14 @@ init_plugin_database() {
         "luci-app-passwall": {
           "name": "PassWall",
           "description": "简单易用的代理工具",
-          "author": "xiaorouji",
+          "author": "Openwrt-Passwall",
           "feeds": [
-            "src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages",
-            "src-git passwall https://github.com/xiaorouji/openwrt-passwall"
+            "src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages",
+            "src-git passwall https://github.com/Openwrt-Passwall/openwrt-passwall"
           ],
           "feeds_comment": "PassWall 软件包和主程序源",
           "dependencies": ["brook", "chinadns-ng", "dns2socks"],
-          "conflicts": ["luci-app-ssr-plus", "luci-app-openclash", "luci-app-bypass"],
-          "size": "~3MB",
-          "complexity": "low",
-          "priority": 2
-        },
-        "luci-app-passwall2": {
-          "name": "PassWall 2",
-          "description": "PassWall的升级版本",
-          "author": "xiaorouji",
-          "feeds": ["src-git passwall2 https://github.com/xiaorouji/openwrt-passwall2"],
-          "feeds_comment": "PassWall 2 主程序源",
-          "dependencies": ["brook", "chinadns-ng", "dns2socks"],
-          "conflicts": ["luci-app-ssr-plus", "luci-app-openclash", "luci-app-passwall"],
+          "conflicts": ["luci-app-ssr-plus", "luci-app-openclash"],
           "size": "~3MB",
           "complexity": "low",
           "priority": 2
@@ -208,22 +197,10 @@ init_plugin_database() {
           "feeds": ["src-git openclash https://github.com/vernesong/OpenClash"],
           "feeds_comment": "OpenClash Clash客户端源",
           "dependencies": ["coreutils-nohup", "bash", "iptables", "dnsmasq-full"],
-          "conflicts": ["luci-app-ssr-plus", "luci-app-passwall", "luci-app-bypass"],
+          "conflicts": ["luci-app-ssr-plus", "luci-app-passwall"],
           "size": "~5MB",
           "complexity": "high",
           "priority": 3
-        },
-        "luci-app-bypass": {
-          "name": "Bypass",
-          "description": "轻量级代理工具",
-          "author": "kiddin9",
-          "feeds": ["src-git bypass https://github.com/kiddin9/openwrt-bypass"],
-          "feeds_comment": "Bypass 轻量级代理源",
-          "dependencies": ["smartdns", "chinadns-ng"],
-          "conflicts": ["luci-app-ssr-plus", "luci-app-passwall", "luci-app-openclash"],
-          "size": "~1MB",
-          "complexity": "low",
-          "priority": 4
         }
       }
     },
@@ -247,8 +224,8 @@ init_plugin_database() {
           "name": "SmartDNS",
           "description": "智能DNS服务器",
           "author": "pymumu",
-          "feeds": ["src-git smartdns https://github.com/pymumu/openwrt-smartdns"],
-          "feeds_comment": "SmartDNS 智能DNS源",
+          "feeds": [],
+          "feeds_comment": "四个支持源码的官方feeds均已包含SmartDNS及LuCI界面",
           "dependencies": ["smartdns"],
           "conflicts": [],
           "size": "~1MB",
@@ -593,7 +570,7 @@ generate_feeds_conf() {
     feeds_content+="# =============================================="$'\n'
     
     # 解析基础feeds
-    IFS=';' read -ra base_feeds <<< "${DEFAULT_FEEDS[$branch]}"
+    IFS='|' read -ra base_feeds <<< "${DEFAULT_FEEDS[$branch]}"
     for feed in "${base_feeds[@]}"; do
         feeds_content+="$feed"$'\n'
     done
@@ -615,7 +592,7 @@ generate_feeds_conf() {
             local categories
             
             if command -v jq &> /dev/null; then
-                categories=$(jq -r '.categories | keys[]' "$PLUGIN_DB_FILE" 2>/dev/null)
+                categories=$(jq -r '.categories | keys[]' "$PLUGIN_DB_FILE" 2>/dev/null | tr -d '\r')
             else
                 log_warning "未安装jq，使用备选方法解析插件"
                 categories="proxy network system storage multimedia security theme development"
@@ -623,8 +600,11 @@ generate_feeds_conf() {
             
             for category in $categories; do
                 if command -v jq &> /dev/null; then
-                    local exists=$(jq -r ".categories.${category}.plugins.${plugin}" "$PLUGIN_DB_FILE" 2>/dev/null)
-                    if [ "$exists" != "null" ]; then
+                    if jq -e \
+                        --arg category "$category" \
+                        --arg plugin "$plugin" \
+                        '.categories[$category].plugins | has($plugin)' \
+                        "$PLUGIN_DB_FILE" >/dev/null 2>&1; then
                         found_category="$category"
                         break
                     fi
@@ -642,8 +622,18 @@ generate_feeds_conf() {
                 
                 # 获取插件的feeds
                 if command -v jq &> /dev/null; then
-                    local feeds=$(jq -r ".categories.${found_category}.plugins.${plugin}.feeds[]" "$PLUGIN_DB_FILE" 2>/dev/null)
-                    local feeds_comment=$(jq -r ".categories.${found_category}.plugins.${plugin}.feeds_comment" "$PLUGIN_DB_FILE" 2>/dev/null)
+                    local feeds
+                    local feeds_comment
+                    feeds=$(jq -r \
+                        --arg category "$found_category" \
+                        --arg plugin "$plugin" \
+                        '.categories[$category].plugins[$plugin].feeds[]?' \
+                        "$PLUGIN_DB_FILE" 2>/dev/null | tr -d '\r')
+                    feeds_comment=$(jq -r \
+                        --arg category "$found_category" \
+                        --arg plugin "$plugin" \
+                        '.categories[$category].plugins[$plugin].feeds_comment // ""' \
+                        "$PLUGIN_DB_FILE" 2>/dev/null | tr -d '\r')
                     
                     if [ -n "$feeds" ]; then
                         while IFS= read -r feed_line; do
@@ -671,7 +661,7 @@ generate_feeds_conf() {
             declare -A unique_feeds
             for feed_info in "${plugin_feeds[@]}"; do
                 IFS='|' read -r feed_line plugin_name comment <<< "$feed_info"
-                if [ -z "${unique_feeds[$feed_line]}" ]; then
+                if [ -z "${unique_feeds[$feed_line]+x}" ]; then
                     unique_feeds["$feed_line"]="$plugin_name|$comment"
                 fi
             done
@@ -706,7 +696,6 @@ generate_feeds_conf() {
     feeds_content+="# =============================================="$'\n'
     feeds_content+="# src-git kenzo https://github.com/kenzok8/openwrt-packages"$'\n'
     feeds_content+="# src-git small https://github.com/kenzok8/small"$'\n'
-    feeds_content+="# src-git kiddin9 https://github.com/kiddin9/openwrt-packages"$'\n'
     feeds_content+="# src-git custom /path/to/custom-feed"$'\n'
     
     # 输出到文件或控制台

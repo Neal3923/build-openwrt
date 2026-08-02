@@ -196,12 +196,21 @@ src-git freifunk https://github.com/freifunk/openwrt-packages.git
 #src-link custom /usr/src/openwrt/custom-feed
 EOF
             ;;
-        "immortalwrt-master"|"Lienol-master")
+        "immortalwrt-master")
             cat > "$feeds_file" << 'EOF'
 src-git packages https://github.com/immortalwrt/packages.git
 src-git luci https://github.com/immortalwrt/luci.git
 src-git routing https://git.openwrt.org/feed/routing.git
 src-git telephony https://git.openwrt.org/feed/telephony.git
+EOF
+            ;;
+        "Lienol-master")
+            cat > "$feeds_file" << 'EOF'
+src-git lienol https://github.com/Lienol/openwrt-package.git;main
+src-git packages https://github.com/Lienol/openwrt-packages.git;25.12
+src-git luci https://github.com/Lienol/openwrt-luci.git;25.12
+src-git routing https://github.com/openwrt/routing.git;openwrt-25.12
+src-git telephony https://github.com/openwrt/telephony.git;openwrt-25.12
 EOF
             ;;
     esac
