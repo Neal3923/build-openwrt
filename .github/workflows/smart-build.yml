@@ -4,7 +4,7 @@
 name: 🛠️ OpenWrt 智能编译
 
 permissions:
-  contents: write
+  contents: read
   
 on:
   # 支持通过Repository Dispatch触发（来自Web界面）
@@ -75,24 +75,33 @@ jobs:
       
     steps:
       - name: 📥 检出代码
-        uses: actions/checkout@v6  # 更新到最新版本
+        uses: actions/checkout@v7  # Node.js 24
       
       - name: ⚙️ 解析编译配置
         id: config
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_SOURCE_BRANCH: ${{ github.event.client_payload.source_branch }}
+          DISPATCH_TARGET_DEVICE: ${{ github.event.client_payload.target_device }}
+          DISPATCH_PLUGINS: ${{ github.event.client_payload.plugins }}
+          INPUT_SOURCE_BRANCH: ${{ github.event.inputs.source_branch }}
+          INPUT_TARGET_DEVICE: ${{ github.event.inputs.target_device }}
+          INPUT_PLUGINS: ${{ github.event.inputs.plugins_list }}
+          INPUT_BUILD_DESCRIPTION: ${{ github.event.inputs.build_description }}
         run: |
           # 优先使用Repository Dispatch的配置，其次使用手动输入
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+          if [ "$EVENT_NAME" = "repository_dispatch" ]; then
             echo "🌐 检测到Web界面触发的编译请求"
-            SOURCE_BRANCH="${{ github.event.client_payload.source_branch }}"
-            TARGET_DEVICE="${{ github.event.client_payload.target_device }}"
-            PLUGINS_LIST="${{ github.event.client_payload.plugins }}"
+            SOURCE_BRANCH="$DISPATCH_SOURCE_BRANCH"
+            TARGET_DEVICE="$DISPATCH_TARGET_DEVICE"
+            PLUGINS_LIST="$DISPATCH_PLUGINS"
             BUILD_DESC="Web界面编译"
           else
             echo "🖱️ 检测到手动触发的编译请求"
-            SOURCE_BRANCH="${{ github.event.inputs.source_branch }}"
-            TARGET_DEVICE="${{ github.event.inputs.target_device }}"
-            PLUGINS_LIST="${{ github.event.inputs.plugins_list }}"
-            BUILD_DESC="${{ github.event.inputs.build_description }}"
+            SOURCE_BRANCH="$INPUT_SOURCE_BRANCH"
+            TARGET_DEVICE="$INPUT_TARGET_DEVICE"
+            PLUGINS_LIST="$INPUT_PLUGINS"
+            BUILD_DESC="$INPUT_BUILD_DESCRIPTION"
           fi
           
           # 设置默认值
@@ -100,6 +109,18 @@ jobs:
           TARGET_DEVICE=${TARGET_DEVICE:-"x86_64"}
           PLUGINS_LIST=${PLUGINS_LIST:-""}
           BUILD_DESC=${BUILD_DESC:-"智能编译"}
+
+          # 规范化并验证插件名称，避免无效输入污染GITHUB_OUTPUT或Shell命令。
+          read -ra REQUESTED_PLUGINS <<< "${PLUGINS_LIST//,/ }"
+          NORMALIZED_PLUGINS=()
+          for plugin in "${REQUESTED_PLUGINS[@]}"; do
+            if [[ ! "$plugin" =~ ^[a-zA-Z0-9][a-zA-Z0-9._+-]*$ ]]; then
+              echo "::error::无效的插件名称: $plugin"
+              exit 1
+            fi
+            NORMALIZED_PLUGINS+=("$plugin")
+          done
+          PLUGINS_LIST=$(IFS=,; echo "${NORMALIZED_PLUGINS[*]}")
           
           echo "📋 编译配置信息:"
           echo "  源码分支: $SOURCE_BRANCH"
@@ -186,7 +207,7 @@ jobs:
           # 输出配置到环境变量
           echo "source_branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
           echo "target_device=$TARGET_DEVICE" >> $GITHUB_OUTPUT
-          echo "plugins_list=$PLUGINS_LIST" >> $GITHUB_OUTPUT
+          printf 'plugins_list=%s\n' "$PLUGINS_LIST" >> "$GITHUB_OUTPUT"
           echo "build_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
           echo "repo_url=$REPO_URL" >> $GITHUB_OUTPUT
           echo "repo_branch=$REPO_BRANCH" >> $GITHUB_OUTPUT
@@ -203,11 +224,13 @@ jobs:
     runs-on: ubuntu-24.04  # 解决Ubuntu 20.04弃用问题
     needs: prepare
     name: 🔨 固件编译
-    if: ${{ github.event.repository.owner.id }} == ${{ github.event.sender.id }}  # 安全检查
+    if: ${{ github.event.repository.owner.id == github.event.sender.id }}  # 安全检查
+    permissions:
+      contents: write
     
     steps:
       - name: 📥 检出代码
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: 🚀 初始化编译环境
         id: init
@@ -396,16 +419,22 @@ jobs:
           echo "status=success" >> $GITHUB_OUTPUT
           echo "✅ 源码克隆完成"
       - name: 🔧 加载自定义feeds
+        env:
+          PLUGINS_LIST: ${{ needs.prepare.outputs.plugins_list }}
         run: |
           echo "🔧 配置自定义feeds..."
           
           # 如果存在对应分支的feeds配置文件则使用
           if [ -f "${{ needs.prepare.outputs.feeds_conf }}" ]; then
-            cp -f ${{ needs.prepare.outputs.feeds_conf }} openwrt/feeds.conf.default
+            cp -f "${{ needs.prepare.outputs.feeds_conf }}" openwrt/feeds.conf.default
             echo "📋 使用自定义feeds配置: ${{ needs.prepare.outputs.feeds_conf }}"
           else
             echo "📋 使用默认feeds配置"
           fi
+
+          # 保留当前源码自带的feeds，只追加所选插件需要的第三方feeds。
+          # 这样可避免把OpenWrt、LEDE、ImmortalWrt等不同源码的基础feeds混用。
+          bash script/manage-feeds.sh "$PLUGINS_LIST" openwrt/feeds.conf.default
 
       - name: 📥 更新feeds
         run: |
@@ -420,6 +449,8 @@ jobs:
           ./scripts/feeds install -a
           echo "✅ feeds安装完成"
       - name: 🔧 生成最终编译配置
+        env:
+          PLUGINS_LIST: ${{ needs.prepare.outputs.plugins_list }}
         run: |
           echo "🔧 开始生成最终编译配置..."
           cd openwrt
@@ -450,26 +481,54 @@ jobs:
               ;;
           esac
           # 合并用户插件和推荐插件，去重
-          PLUGINS="${{ needs.prepare.outputs.plugins_list }}"
+          PLUGINS=$(printf '%s' "$PLUGINS_LIST" | tr ',' ' ')
           ALL_PLUGINS="$RECOMMEND_PLUGINS $PLUGINS"
           # 去重
-          ALL_PLUGINS=$(echo $ALL_PLUGINS | tr ' ' '\n' | sort | uniq | tr '\n' ' ')
+          ALL_PLUGINS=$(printf '%s\n' $ALL_PLUGINS | sed '/^$/d' | sort -u | tr '\n' ' ')
           if [ -n "$ALL_PLUGINS" ]; then
             echo "🔧 配置选中的插件..."
             for plugin in $ALL_PLUGINS; do
               plugin=$(echo "$plugin" | xargs)  # 去除空格
               if [ -n "$plugin" ]; then
+                if [[ ! "$plugin" =~ ^[a-zA-Z0-9][a-zA-Z0-9._+-]*$ ]]; then
+                  echo "::error::无效的插件名称: $plugin"
+                  exit 1
+                fi
                 echo "CONFIG_PACKAGE_$plugin=y" >> .config
                 echo "  ✓ 添加插件: $plugin"
+
+                # 新版官方feeds提供netdata本体，但可能不再提供luci-app-netdata。
+                # 同时尝试本体，后续验证会优先接受LuCI包，缺失时使用本体。
+                if [ "$plugin" = "luci-app-netdata" ]; then
+                  echo "CONFIG_PACKAGE_netdata=y" >> .config
+                fi
               fi
             done
           fi
           
           # 生成最终配置
           make defconfig
+
+          # make defconfig会静默丢弃不存在的包，必须验证用户选择确实生效。
+          CONFIG_ERRORS=0
+          for plugin in $PLUGINS; do
+            if grep -qx "CONFIG_PACKAGE_${plugin}=y" .config; then
+              echo "  ✅ 已启用用户插件: $plugin"
+            elif [ "$plugin" = "luci-app-netdata" ] && grep -qx "CONFIG_PACKAGE_netdata=y" .config; then
+              echo "::warning::luci-app-netdata不可用，已改用netdata本体"
+            else
+              echo "::error::插件不存在或未成功启用: $plugin"
+              CONFIG_ERRORS=$((CONFIG_ERRORS + 1))
+            fi
+          done
+
+          if [ "$CONFIG_ERRORS" -ne 0 ]; then
+            echo "::error::共有 $CONFIG_ERRORS 个用户插件未进入最终配置"
+            exit 1
+          fi
           
           echo "📋 最终配置文件预览："
-          cat .config | grep -E "^CONFIG_TARGET|^CONFIG_PACKAGE.*=y" | head -20
+          grep -m 20 -E "^CONFIG_TARGET|^CONFIG_PACKAGE.*=y" .config
           
           echo "✅ 编译配置生成完成"
       - name: 📥 下载依赖包
@@ -502,6 +561,9 @@ jobs:
       - name: 📦 整理编译产物
         id: organize
         if: steps.compile.outputs.status == 'success'
+        env:
+          SOURCE_BRANCH: ${{ needs.prepare.outputs.source_branch }}
+          TARGET_DEVICE: ${{ needs.prepare.outputs.target_device }}
         run: |
           echo "📦 开始整理编译产物..."
           cd openwrt/bin/targets/*/*
@@ -513,21 +575,26 @@ jobs:
           FIRMWARE_SIZE=$(du -sh . | cut -f1)
           echo "FIRMWARE_SIZE=$FIRMWARE_SIZE" >> $GITHUB_ENV
           
-          # 重命名固件文件
+          # 重命名固件文件，同时保留原始类型名，避免多个.gz文件互相覆盖。
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          SOURCE_CLEAN=$(printf '%s' "$SOURCE_BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          DEVICE_CLEAN=$(printf '%s' "$TARGET_DEVICE" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          FIRMWARE_COUNT=0
+
           for file in *; do
             if [[ "$file" == *.bin ]] || [[ "$file" == *.img ]] || [[ "$file" == *.gz ]]; then
-              # 提取文件扩展名
-              EXT="${file##*.}"
-              # 生成新文件名
-              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-              # 清理文件名中的特殊字符
-              SOURCE_CLEAN=$(echo "${{ needs.prepare.outputs.source_name }}" | sed 's/[^a-zA-Z0-9]/_/g')
-              DEVICE_CLEAN=$(echo "${{ needs.prepare.outputs.device_name }}" | sed 's/[^a-zA-Z0-9]/_/g')
-              NEW_NAME="OpenWrt_${SOURCE_CLEAN}_${DEVICE_CLEAN}_${TIMESTAMP}.${EXT}"
-              mv "$file" "$NEW_NAME"
+              ORIGINAL_NAME="${file#openwrt-}"
+              NEW_NAME="OpenWrt_${SOURCE_CLEAN}_${DEVICE_CLEAN}_${TIMESTAMP}_${ORIGINAL_NAME}"
+              mv -- "$file" "$NEW_NAME"
+              FIRMWARE_COUNT=$((FIRMWARE_COUNT + 1))
               echo "📦 重命名: $file -> $NEW_NAME"
             fi
           done
+
+          if [ "$FIRMWARE_COUNT" -eq 0 ]; then
+            echo "::error::目标目录中没有找到固件文件"
+            exit 1
+          fi
           
           # 生成详细的固件信息文件
           cat > firmware_info.txt << EOF
@@ -548,7 +615,7 @@ jobs:
           📱 默认信息:
           - 默认IP地址: 192.168.1.1
           - 默认用户名: root
-          - 默认密码: password
+          - 默认密码: 以所选源码的默认配置为准，请首次登录后立即设置
           - 默认WiFi名: OpenWrt (如支持)
           - 默认WiFi密码: 无
           
@@ -600,7 +667,7 @@ jobs:
           echo "标签: $RELEASE_TAG"
           echo "名称: $RELEASE_NAME"
       - name: 📢 发布固件到 Releases
-        uses: softprops/action-gh-release@v2  # 更新到最新版本
+        uses: softprops/action-gh-release@v3  # Node.js 24
         if: steps.release.outputs.release_tag != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -628,13 +695,6 @@ jobs:
           echo "  Releases: https://github.com/${{ github.repository }}/releases/tag/${{ steps.release.outputs.release_tag }}"
           echo ""
           echo "📝 编译日志: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-      - name: 🧹 清理旧的工作流程记录
-        uses: GitRML/delete-workflow-runs@main
-        with:
-          retain_days: 7
-          keep_minimum_runs: 5
-          token: ${{ secrets.GITHUB_TOKEN }}
-
 # 编译失败处理
   failure_handler:
     runs-on: ubuntu-24.04
@@ -645,18 +705,20 @@ jobs:
     steps:
       - name: 📝 生成失败报告
         run: |
-          echo "❌ OpenWrt编译失败"
+          echo "❌ OpenWrt工作流失败"
           echo "📋 失败信息:"
+          echo "  配置解析Job: ${{ needs.prepare.result }}"
+          echo "  构建与发布Job: ${{ needs.build.result }}"
           echo "  源码: ${{ needs.prepare.outputs.source_branch }}"
           echo "  设备: ${{ needs.prepare.outputs.target_device }}"
           echo "  插件: ${{ needs.prepare.outputs.plugins_list }}"
           echo "  时间: $(date '+%Y-%m-%d %H:%M:%S')"
           echo ""
-          echo "🔍 可能的失败原因:"
-          echo "  1. 插件配置冲突"
-          echo "  2. 设备存储空间不足"
-          echo "  3. 网络连接问题"
-          echo "  4. 源码或依赖包问题"
+          echo "🔍 排查顺序:"
+          echo "  1. 查看日志中最早出现的 ::error:: 或 Error"
+          echo "  2. 检查插件可用性与feeds更新结果"
+          echo "  3. 检查固件编译、Artifact上传和Release发布步骤"
+          echo "  4. 检查网络、磁盘空间或上游源码问题"
           echo ""
           echo "📖 解决建议:"
           echo "  1. 检查插件冲突检测结果"
@@ -665,6 +727,46 @@ jobs:
           echo "  4. 查看详细的编译日志"
           echo ""
           echo "🔗 编译日志: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+# 工作流记录清理：使用GitHub CLI替代未固定版本的第三方Action。
+  cleanup:
+    runs-on: ubuntu-24.04
+    needs: build
+    if: always()
+    name: 🧹 清理旧的工作流程记录
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - name: 🧹 保留7天内且至少5次运行
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RETAIN_DAYS: "7"
+          KEEP_MINIMUM_RUNS: "5"
+        run: |
+          set -euo pipefail
+          CUTOFF=$(date -u -d "$RETAIN_DAYS days ago" +%s)
+          RUN_INDEX=0
+
+          while IFS=$'\t' read -r RUN_ID CREATED_AT; do
+            RUN_INDEX=$((RUN_INDEX + 1))
+            if [ "$RUN_INDEX" -le "$KEEP_MINIMUM_RUNS" ]; then
+              continue
+            fi
+
+            CREATED_EPOCH=$(date -u -d "$CREATED_AT" +%s)
+            if [ "$CREATED_EPOCH" -lt "$CUTOFF" ]; then
+              echo "🗑️ 删除旧运行: $RUN_ID ($CREATED_AT)"
+              gh api --method DELETE \
+                "/repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID"
+            fi
+          done < <(
+            gh api --paginate \
+              "/repos/$GITHUB_REPOSITORY/actions/workflows/smart-build.yml/runs?per_page=100" \
+              --jq '.workflow_runs[] | [.id, .created_at] | @tsv'
+          )
 # 编译成功处理
   success_handler:
     runs-on: ubuntu-24.04

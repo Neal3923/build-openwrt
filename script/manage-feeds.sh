@@ -26,7 +26,8 @@ declare -A PLUGIN_FEEDS_MAP=(
     ["luci-app-jd-dailybonus"]="src-git dailybonus https://github.com/jerrykuku/luci-app-jd-dailybonus"
 )
 
-# 基础feeds配置
+# 输出文件不存在时使用的后备基础feeds配置。
+# 工作流会传入源码自带的feeds.conf.default，因此不会用这些内容覆盖源码feeds。
 BASE_FEEDS=$(cat << 'EOF'
 src-git packages https://github.com/coolsnowwolf/packages
 src-git luci https://github.com/coolsnowwolf/luci
@@ -65,41 +66,48 @@ get_plugin_feeds() {
 generate_feeds_conf() {
     local plugins_str="$1"
     local output_file="${2:-feeds.conf.default}"
-    
-    # 使用关联数组去重
-    declare -A feeds_map
-    
-    # 添加基础feeds
+    local temp_file
+
+    temp_file=$(mktemp)
+    trap 'rm -f "$temp_file"' RETURN
+
+    # 优先保留当前源码已有的feeds，避免不同OpenWrt分支之间混用基础feeds。
+    if [ -f "$output_file" ]; then
+        cp "$output_file" "$temp_file"
+    else
+        printf '%s\n' "$BASE_FEEDS" > "$temp_file"
+    fi
+
+    # 按feed名称去重，防止重复追加同一个第三方源。
+    declare -A feed_names
     while IFS= read -r line; do
-        if [ -n "$line" ]; then
-            feeds_map["$line"]=1
+        if [[ "$line" =~ ^[[:space:]]*src-git(-full)?[[:space:]]+([^[:space:]]+) ]]; then
+            feed_names["${BASH_REMATCH[2]}"]=1
         fi
-    done <<< "$BASE_FEEDS"
+    done < "$temp_file"
     
     # 解析插件列表
     local plugins=($(parse_plugins "$plugins_str"))
     
     # 添加插件对应的feeds
     for plugin in "${plugins[@]}"; do
-        local plugin_feeds=$(get_plugin_feeds "$plugin")
+        local plugin_feeds
+        plugin_feeds=$(get_plugin_feeds "$plugin")
         while IFS= read -r feed; do
             if [ -n "$feed" ]; then
-                feeds_map["$feed"]=1
+                local feed_name
+                feed_name=$(awk '{print $2}' <<< "$feed")
+                if [ -n "$feed_name" ] && [ -z "${feed_names[$feed_name]+x}" ]; then
+                    echo "$feed" >> "$temp_file"
+                    feed_names["$feed_name"]=1
+                    echo "➕ 添加插件feed: $feed_name"
+                fi
             fi
         done <<< "$plugin_feeds"
     done
-    
-    # 写入文件
-    > "$output_file"
-    for feed in "${!feeds_map[@]}"; do
-        echo "$feed" >> "$output_file"
-    done
-    
-    # 排序（保持基础feeds在前）
-    local temp_file=$(mktemp)
-    grep "^src-git packages\|^src-git luci\|^src-git routing\|^src-git telephony" "$output_file" > "$temp_file"
-    grep -v "^src-git packages\|^src-git luci\|^src-git routing\|^src-git telephony" "$output_file" | sort >> "$temp_file"
+
     mv "$temp_file" "$output_file"
+    trap - RETURN
 }
 
 # 显示使用帮助
