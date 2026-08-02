@@ -9,7 +9,7 @@ on:
     types: [web_build]
     
   permissions:
-  contents: write
+    contents: write
   
   # 支持手动触发
   workflow_dispatch:
