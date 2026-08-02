@@ -202,11 +202,16 @@ class WizardManager {
         return {
             'lede-master': {
                 name: "Lean's LEDE",
-                description: '国内热门分支，集成大量插件',
+                description: '国内热门源码，可选择 master 或历史稳定快照',
                 repo: 'https://github.com/coolsnowwolf/lede',
                 branch: 'master',
                 defaultBranch: 'master',
-                branches: [{ value: 'master', label: 'master' }],
+                branches: [
+                    { value: 'master', label: 'master（开发版）' },
+                    { value: '20251001', label: '20251001（稳定快照）' },
+                    { value: '20230609', label: '20230609（历史快照）' },
+                    { value: '20221001', label: '20221001（历史快照）' }
+                ],
                 recommended: true,
                 stability: '稳定',
                 plugins: '丰富'
@@ -485,7 +490,7 @@ class WizardManager {
                             <span class="detail-value">${this.getRepoShortName(source.repo)}</span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">分支:</span>
+                            <span class="detail-label">分支/版本:</span>
                             <select class="source-branch-select" data-source="${key}" aria-label="${source.name} 分支">
                                 ${branchOptions.map(branch => `
                                     <option value="${branch.value}" ${branch.value === selectedBranch ? 'selected' : ''}>${branch.label}</option>
@@ -735,7 +740,7 @@ class WizardManager {
                 <h3>📋 配置摘要</h3>
                 <div class="summary-grid">
                     <div class="summary-item">
-                        <div class="summary-label">源码仓库 / 分支</div>
+                        <div class="summary-label">源码仓库 / 分支或版本</div>
                         <div class="summary-value">${sourceInfo?.name || '未选择'} / ${this.config.repoBranch || '未选择'}</div>
                     </div>
                     <div class="summary-item">
@@ -1284,7 +1289,7 @@ class WizardManager {
         return `确认开始编译？\n\n` +
             `📋 编译配置:\n` +
             `源码仓库: ${sourceInfo?.name || '未知'}\n` +
-            `实际分支: ${this.config.repoBranch || '未知'}\n` +
+            `实际分支/版本: ${this.config.repoBranch || '未知'}\n` +
             `目标设备: ${deviceInfo?.name || '未知'}\n` +
             `选中插件: ${this.config.plugins.length}个\n` +
             `工作流类型: 智能编译 (smart-build.yml)\n\n` +

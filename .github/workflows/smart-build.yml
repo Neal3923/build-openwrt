@@ -27,7 +27,7 @@ on:
           - Lienol-master
 
       repo_branch:
-        description: "实际仓库分支（auto使用该源码的默认分支）"
+        description: "实际仓库分支/版本（auto使用该源码的默认值）"
         required: true
         default: "auto"
         type: choice
@@ -35,6 +35,9 @@ on:
           - auto
           - main
           - master
+          - "20251001"
+          - "20230609"
+          - "20221001"
           - openwrt-25.12
           - openwrt-24.10
           - openwrt-23.05
@@ -165,7 +168,7 @@ jobs:
             "lede-master")
               REPO_URL="https://github.com/coolsnowwolf/lede"
               DEFAULT_REPO_BRANCH="master"
-              ALLOWED_REPO_BRANCHES="master"
+              ALLOWED_REPO_BRANCHES="master 20251001 20230609 20221001"
               SOURCE_NAME="Lean's LEDE"
               FEEDS_CONF="config/lede-master/feeds.conf.default"
               CONFIG_FILE="config/lede-master/config"
@@ -201,8 +204,8 @@ jobs:
           elif [[ " $ALLOWED_REPO_BRANCHES " == *" $REQUESTED_REPO_BRANCH "* ]]; then
             REPO_BRANCH="$REQUESTED_REPO_BRANCH"
           else
-            echo "::error::源码 $SOURCE_BRANCH 不支持分支 $REQUESTED_REPO_BRANCH"
-            echo "::error::可用分支: $ALLOWED_REPO_BRANCHES"
+            echo "::error::源码 $SOURCE_BRANCH 不支持分支/版本 $REQUESTED_REPO_BRANCH"
+            echo "::error::可用分支/版本: $ALLOWED_REPO_BRANCHES"
             exit 1
           fi
 
