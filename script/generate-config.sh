@@ -486,16 +486,6 @@ CONFIG_PACKAGE_ariang=y
 EOF
             ;;
             
-        "luci-app-adbyby-plus")
-            cat << 'EOF'
-
-# ======================== ADByby Plus+ 广告过滤 ========================
-CONFIG_PACKAGE_luci-app-adbyby-plus=y
-CONFIG_PACKAGE_luci-i18n-adbyby-plus-zh-cn=y
-CONFIG_PACKAGE_adbyby=y
-EOF
-            ;;
-            
         "luci-app-adguardhome")
             cat << 'EOF'
 
@@ -513,17 +503,6 @@ EOF
 CONFIG_PACKAGE_luci-app-wol=y
 CONFIG_PACKAGE_luci-i18n-wol-zh-cn=y
 CONFIG_PACKAGE_etherwake=y
-EOF
-            ;;
-            
-        *)
-            log_warning "未知插件: $plugin，生成基本配置"
-            echo ""
-            echo "# 未知插件配置: $plugin"
-            echo "CONFIG_PACKAGE_${plugin}=y"
-            
-            cat << 'EOF'
-
 EOF
             ;;
             

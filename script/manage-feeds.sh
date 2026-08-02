@@ -11,19 +11,15 @@ declare -A PLUGIN_FEEDS_MAP=(
     ["luci-app-ssr-plus"]="src-git helloworld https://github.com/fw876/helloworld"
     
     # PassWall
-    ["luci-app-passwall"]="src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages;src-git passwall https://github.com/xiaorouji/openwrt-passwall"
-    ["luci-app-passwall2"]="src-git passwall2 https://github.com/xiaorouji/openwrt-passwall2"
+    ["luci-app-passwall"]="src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages;src-git passwall https://github.com/Openwrt-Passwall/openwrt-passwall"
     
     # OpenClash
     ["luci-app-openclash"]="src-git openclash https://github.com/vernesong/OpenClash"
     
     # 其他常用插件
     ["luci-app-adguardhome"]="src-git adguardhome https://github.com/rufengsuixing/luci-app-adguardhome"
-    ["luci-app-argon"]="src-git argon https://github.com/jerrykuku/luci-theme-argon;src-git argon_config https://github.com/jerrykuku/luci-app-argon-config"
-    ["luci-app-vssr"]="src-git vssr https://github.com/jerrykuku/lua-maxminddb;src-git vssr_app https://github.com/jerrykuku/luci-app-vssr"
-    ["luci-app-bypass"]="src-git bypass https://github.com/kiddin9/openwrt-bypass"
+    ["luci-theme-argon"]="src-git argon https://github.com/jerrykuku/luci-theme-argon;src-git argon_config https://github.com/jerrykuku/luci-app-argon-config"
     ["luci-app-pushbot"]="src-git pushbot https://github.com/zzsj0928/luci-app-pushbot"
-    ["luci-app-jd-dailybonus"]="src-git dailybonus https://github.com/jerrykuku/luci-app-jd-dailybonus"
 )
 
 # 输出文件不存在时使用的后备基础feeds配置。

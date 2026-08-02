@@ -242,7 +242,7 @@
             "name": "Lienol's OpenWrt",
             "description": "另一个流行的OpenWrt分支",
             "repository": "https://github.com/Lienol/openwrt.git",
-            "branch": "main",
+            "branch": "24.10",
             "stability": "stable",
             "recommended": false,
             "features": [

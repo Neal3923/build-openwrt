@@ -225,15 +225,7 @@ const PLUGIN_CONFIGS = {
       'luci-app-adguardhome': {
         name: 'AdGuard Home',
         description: 'DNS广告拦截',
-        conflicts: ['luci-app-adbyby-plus'],
         size: '15M',
-        stability: 'stable'
-      },
-      'luci-app-adbyby-plus': {
-        name: 'AdByby Plus+',
-        description: '广告过滤',
-        conflicts: ['luci-app-adguardhome'],
-        size: '3M',
         stability: 'stable'
       },
       'luci-app-ddns': {
@@ -322,11 +314,6 @@ const CONFLICT_RULES = {
   // 代理软件互斥
   proxy_mutual_exclusive: [
     ['luci-app-ssr-plus', 'luci-app-passwall', 'luci-app-openclash']
-  ],
-
-  // 广告拦截互斥
-  adblock_mutual_exclusive: [
-    ['luci-app-adguardhome', 'luci-app-adbyby-plus']
   ],
 
   // 下载工具互斥

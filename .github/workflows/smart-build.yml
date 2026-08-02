@@ -156,7 +156,7 @@ jobs:
               ;;
             "Lienol-master")
               REPO_URL="https://github.com/Lienol/openwrt"
-              REPO_BRANCH="22.03"
+              REPO_BRANCH="24.10"
               SOURCE_NAME="Lienol"
               FEEDS_CONF="config/Lienol-master/feeds.conf.default"
               CONFIG_FILE="config/Lienol-master/config"
