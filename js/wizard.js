@@ -463,7 +463,7 @@ class WizardManager {
             return;
         }
 
-        let html = '<div class="options-grid">';
+        let html = '<div class="options-grid source-options-grid">';
 
         Object.entries(this.sourceBranches).forEach(([key, source]) => {
             const isSelected = this.config.source === key;
