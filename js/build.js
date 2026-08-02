@@ -105,7 +105,8 @@ class OpenWrtBuilder {
         
         // 添加初始日志
         this.addLogEntry('info', `🚀 开始编译 OpenWrt 固件`);
-        this.addLogEntry('info', `📦 源码分支: ${buildConfig.source_branch}`);
+        this.addLogEntry('info', `📦 源码仓库: ${buildConfig.source_branch}`);
+        this.addLogEntry('info', `🌿 实际分支: ${buildConfig.repo_branch || 'auto'}`);
         this.addLogEntry('info', `🎯 目标设备: ${buildConfig.target_device}`);
         this.addLogEntry('info', `🔧 插件数量: ${buildConfig.plugins.length} 个`);
         
@@ -133,6 +134,7 @@ class OpenWrtBuilder {
                 event_type: 'web_build',
                 client_payload: {
                     source_branch: buildConfig.source_branch,
+                    repo_branch: buildConfig.repo_branch || 'auto',
                     target_device: buildConfig.target_device,
                     plugins: buildConfig.plugins,
                     custom_sources: buildConfig.custom_sources || [],

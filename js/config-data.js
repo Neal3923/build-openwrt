@@ -76,9 +76,16 @@ function hasValidToken() {
 const SOURCE_BRANCHES = {
   'openwrt-main': {
     name: 'OpenWrt 官方',
-    description: '最新稳定版本，兼容性最好',
+    description: '官方源码，可选择开发版或稳定版分支',
     repo: 'https://github.com/openwrt/openwrt',
-    branch: 'openwrt-23.05',
+    branch: 'main',
+    defaultBranch: 'main',
+    branches: [
+      { value: 'main', label: 'main（开发版）' },
+      { value: 'openwrt-25.12', label: '25.12（稳定版）' },
+      { value: 'openwrt-24.10', label: '24.10' },
+      { value: 'openwrt-23.05', label: '23.05' }
+    ],
     recommended: true,
     stability: '高',
     plugins: '基础'
@@ -88,18 +95,45 @@ const SOURCE_BRANCHES = {
     description: '国内热门分支，集成大量插件',
     repo: 'https://github.com/coolsnowwolf/lede',
     branch: 'master',
+    defaultBranch: 'master',
+    branches: [
+      { value: 'master', label: 'master' }
+    ],
     recommended: true,
     stability: '中',
     plugins: '丰富'
   },
   'immortalwrt-master': {
     name: 'ImmortalWrt',
-    description: '增强版官方固件',
+    description: '增强版官方固件，可选择开发版或稳定版分支',
     repo: 'https://github.com/immortalwrt/immortalwrt',
-    branch: 'openwrt-23.05',
+    branch: 'master',
+    defaultBranch: 'master',
+    branches: [
+      { value: 'master', label: 'master（开发版）' },
+      { value: 'openwrt-25.12', label: '25.12（稳定版）' },
+      { value: 'openwrt-24.10', label: '24.10' },
+      { value: 'openwrt-23.05', label: '23.05' }
+    ],
     recommended: false,
     stability: '中',
     plugins: '增强'
+  },
+  'Lienol-master': {
+    name: "Lienol's OpenWrt",
+    description: 'Lienol 源码，可选择多个稳定版分支',
+    repo: 'https://github.com/Lienol/openwrt',
+    branch: '25.12',
+    defaultBranch: '25.12',
+    branches: [
+      { value: '25.12', label: '25.12（默认）' },
+      { value: '24.10', label: '24.10' },
+      { value: '23.05', label: '23.05' },
+      { value: '19.07', label: '19.07' }
+    ],
+    recommended: false,
+    stability: '中',
+    plugins: '特色'
   }
 };
 

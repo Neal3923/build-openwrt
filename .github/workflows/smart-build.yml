@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       source_branch:
-        description: "源码分支"
+        description: "源码仓库"
         required: true
         default: "lede-master"
         type: choice
@@ -25,6 +25,23 @@ on:
           - lede-master
           - immortalwrt-master
           - Lienol-master
+
+      repo_branch:
+        description: "实际仓库分支（auto使用该源码的默认分支）"
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - main
+          - master
+          - openwrt-25.12
+          - openwrt-24.10
+          - openwrt-23.05
+          - "25.12"
+          - "24.10"
+          - "23.05"
+          - "19.07"
       
       target_device:
         description: "目标设备"
@@ -82,9 +99,11 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           DISPATCH_SOURCE_BRANCH: ${{ github.event.client_payload.source_branch }}
+          DISPATCH_REPO_BRANCH: ${{ github.event.client_payload.repo_branch }}
           DISPATCH_TARGET_DEVICE: ${{ github.event.client_payload.target_device }}
           DISPATCH_PLUGINS: ${{ github.event.client_payload.plugins }}
           INPUT_SOURCE_BRANCH: ${{ github.event.inputs.source_branch }}
+          INPUT_REPO_BRANCH: ${{ github.event.inputs.repo_branch }}
           INPUT_TARGET_DEVICE: ${{ github.event.inputs.target_device }}
           INPUT_PLUGINS: ${{ github.event.inputs.plugins_list }}
           INPUT_BUILD_DESCRIPTION: ${{ github.event.inputs.build_description }}
@@ -93,12 +112,14 @@ jobs:
           if [ "$EVENT_NAME" = "repository_dispatch" ]; then
             echo "🌐 检测到Web界面触发的编译请求"
             SOURCE_BRANCH="$DISPATCH_SOURCE_BRANCH"
+            REQUESTED_REPO_BRANCH="$DISPATCH_REPO_BRANCH"
             TARGET_DEVICE="$DISPATCH_TARGET_DEVICE"
             PLUGINS_LIST="$DISPATCH_PLUGINS"
             BUILD_DESC="Web界面编译"
           else
             echo "🖱️ 检测到手动触发的编译请求"
             SOURCE_BRANCH="$INPUT_SOURCE_BRANCH"
+            REQUESTED_REPO_BRANCH="$INPUT_REPO_BRANCH"
             TARGET_DEVICE="$INPUT_TARGET_DEVICE"
             PLUGINS_LIST="$INPUT_PLUGINS"
             BUILD_DESC="$INPUT_BUILD_DESCRIPTION"
@@ -106,6 +127,7 @@ jobs:
           
           # 设置默认值
           SOURCE_BRANCH=${SOURCE_BRANCH:-"lede-master"}
+          REQUESTED_REPO_BRANCH=${REQUESTED_REPO_BRANCH:-"auto"}
           TARGET_DEVICE=${TARGET_DEVICE:-"x86_64"}
           PLUGINS_LIST=${PLUGINS_LIST:-""}
           BUILD_DESC=${BUILD_DESC:-"智能编译"}
@@ -123,7 +145,8 @@ jobs:
           PLUGINS_LIST=$(IFS=,; echo "${NORMALIZED_PLUGINS[*]}")
           
           echo "📋 编译配置信息:"
-          echo "  源码分支: $SOURCE_BRANCH"
+          echo "  源码仓库: $SOURCE_BRANCH"
+          echo "  请求分支: $REQUESTED_REPO_BRANCH"
           echo "  目标设备: $TARGET_DEVICE"
           echo "  插件列表: $PLUGINS_LIST"
           echo "  编译描述: $BUILD_DESC"
@@ -132,7 +155,8 @@ jobs:
           case $SOURCE_BRANCH in
             "openwrt-main")
               REPO_URL="https://github.com/openwrt/openwrt"
-              REPO_BRANCH="main"
+              DEFAULT_REPO_BRANCH="main"
+              ALLOWED_REPO_BRANCHES="main openwrt-25.12 openwrt-24.10 openwrt-23.05"
               SOURCE_NAME="OpenWrt官方"
               FEEDS_CONF="config/openwrt-main/feeds.conf.default"
               CONFIG_FILE="config/openwrt-main/config"
@@ -140,7 +164,8 @@ jobs:
               ;;
             "lede-master")
               REPO_URL="https://github.com/coolsnowwolf/lede"
-              REPO_BRANCH="master"
+              DEFAULT_REPO_BRANCH="master"
+              ALLOWED_REPO_BRANCHES="master"
               SOURCE_NAME="Lean's LEDE"
               FEEDS_CONF="config/lede-master/feeds.conf.default"
               CONFIG_FILE="config/lede-master/config"
@@ -148,7 +173,8 @@ jobs:
               ;;
             "immortalwrt-master")
               REPO_URL="https://github.com/immortalwrt/immortalwrt"
-              REPO_BRANCH="master"
+              DEFAULT_REPO_BRANCH="master"
+              ALLOWED_REPO_BRANCHES="master openwrt-25.12 openwrt-24.10 openwrt-23.05"
               SOURCE_NAME="ImmortalWrt"
               FEEDS_CONF="config/immortalwrt-master/feeds.conf.default"
               CONFIG_FILE="config/immortalwrt-master/config"
@@ -156,7 +182,8 @@ jobs:
               ;;
             "Lienol-master")
               REPO_URL="https://github.com/Lienol/openwrt"
-              REPO_BRANCH="24.10"
+              DEFAULT_REPO_BRANCH="25.12"
+              ALLOWED_REPO_BRANCHES="25.12 24.10 23.05 19.07"
               SOURCE_NAME="Lienol"
               FEEDS_CONF="config/Lienol-master/feeds.conf.default"
               CONFIG_FILE="config/Lienol-master/config"
@@ -167,6 +194,19 @@ jobs:
               exit 1
               ;;
           esac
+
+          # auto使用各源码默认分支，显式选择时校验源码与分支组合。
+          if [ "$REQUESTED_REPO_BRANCH" = "auto" ]; then
+            REPO_BRANCH="$DEFAULT_REPO_BRANCH"
+          elif [[ " $ALLOWED_REPO_BRANCHES " == *" $REQUESTED_REPO_BRANCH "* ]]; then
+            REPO_BRANCH="$REQUESTED_REPO_BRANCH"
+          else
+            echo "::error::源码 $SOURCE_BRANCH 不支持分支 $REQUESTED_REPO_BRANCH"
+            echo "::error::可用分支: $ALLOWED_REPO_BRANCHES"
+            exit 1
+          fi
+
+          echo "  实际分支: $REPO_BRANCH"
           
           # 根据目标设备设置配置信息
           case $TARGET_DEVICE in
@@ -202,7 +242,8 @@ jobs:
           esac
           
           # 生成构建标签
-          BUILD_TAG="OpenWrt_${SOURCE_NAME// /_}_${DEVICE_NAME}_$(date +%Y%m%d_%H%M%S)"
+          BRANCH_TAG=$(printf '%s' "$REPO_BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          BUILD_TAG="OpenWrt_${SOURCE_NAME// /_}_${BRANCH_TAG}_${DEVICE_NAME}_$(date +%Y%m%d_%H%M%S)"
           
           # 输出配置到环境变量
           echo "source_branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
@@ -413,7 +454,9 @@ jobs:
           df -hT $PWD
           
           # 克隆源码（只克隆最新提交以节省时间和空间）
-          git clone -q --single-branch --depth=1 --branch=${{ needs.prepare.outputs.repo_branch }} ${{ needs.prepare.outputs.repo_url }} openwrt
+          git clone -q --single-branch --depth=1 \
+            --branch "${{ needs.prepare.outputs.repo_branch }}" \
+            "${{ needs.prepare.outputs.repo_url }}" openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
           
           echo "status=success" >> $GITHUB_OUTPUT
@@ -563,6 +606,7 @@ jobs:
         if: steps.compile.outputs.status == 'success'
         env:
           SOURCE_BRANCH: ${{ needs.prepare.outputs.source_branch }}
+          REPO_BRANCH: ${{ needs.prepare.outputs.repo_branch }}
           TARGET_DEVICE: ${{ needs.prepare.outputs.target_device }}
         run: |
           echo "📦 开始整理编译产物..."
@@ -577,7 +621,7 @@ jobs:
           
           # 重命名固件文件，同时保留原始类型名，避免多个.gz文件互相覆盖。
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-          SOURCE_CLEAN=$(printf '%s' "$SOURCE_BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          SOURCE_CLEAN=$(printf '%s_%s' "$SOURCE_BRANCH" "$REPO_BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g')
           DEVICE_CLEAN=$(printf '%s' "$TARGET_DEVICE" | sed 's/[^a-zA-Z0-9._-]/_/g')
           FIRMWARE_COUNT=0
 
@@ -604,7 +648,8 @@ jobs:
           📋 基本信息:
           编译时间: $(date '+%Y-%m-%d %H:%M:%S')
           构建标签: ${{ needs.prepare.outputs.build_tag }}
-          源码分支: ${{ needs.prepare.outputs.source_name }}
+          源码仓库: ${{ needs.prepare.outputs.source_name }}
+          实际分支: ${{ needs.prepare.outputs.repo_branch }}
           目标设备: ${{ needs.prepare.outputs.device_name }}
           固件大小: ${FIRMWARE_SIZE}
           
@@ -710,6 +755,7 @@ jobs:
           echo "  配置解析Job: ${{ needs.prepare.result }}"
           echo "  构建与发布Job: ${{ needs.build.result }}"
           echo "  源码: ${{ needs.prepare.outputs.source_branch }}"
+          echo "  分支: ${{ needs.prepare.outputs.repo_branch }}"
           echo "  设备: ${{ needs.prepare.outputs.target_device }}"
           echo "  插件: ${{ needs.prepare.outputs.plugins_list }}"
           echo "  时间: $(date '+%Y-%m-%d %H:%M:%S')"
@@ -780,6 +826,7 @@ jobs:
           echo "🎉 OpenWrt编译成功完成!"
           echo "📦 固件信息:"
           echo "  源码: ${{ needs.prepare.outputs.source_branch }}"
+          echo "  分支: ${{ needs.prepare.outputs.repo_branch }}"
           echo "  设备: ${{ needs.prepare.outputs.target_device }}"
           echo "  插件: ${{ needs.prepare.outputs.plugins_list }}"
           echo "  标签: ${{ needs.prepare.outputs.build_tag }}"

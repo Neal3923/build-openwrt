@@ -204,6 +204,9 @@
             "description": "基于OpenWrt的增强版本，包含大量中国用户常用插件",
             "repository": "https://github.com/coolsnowwolf/lede.git",
             "branch": "master",
+            "branches": [
+                "master"
+            ],
             "stability": "stable",
             "recommended": true,
             "features": [
@@ -217,6 +220,12 @@
             "description": "OpenWrt官方主分支，最新功能和安全更新",
             "repository": "https://github.com/openwrt/openwrt.git",
             "branch": "main",
+            "branches": [
+                "main",
+                "openwrt-25.12",
+                "openwrt-24.10",
+                "openwrt-23.05"
+            ],
             "stability": "development",
             "recommended": false,
             "features": [
@@ -230,6 +239,12 @@
             "description": "基于OpenWrt的fork版本，专注于中国用户需求",
             "repository": "https://github.com/immortalwrt/immortalwrt.git",
             "branch": "master",
+            "branches": [
+                "master",
+                "openwrt-25.12",
+                "openwrt-24.10",
+                "openwrt-23.05"
+            ],
             "stability": "stable",
             "recommended": true,
             "features": [
@@ -242,7 +257,13 @@
             "name": "Lienol's OpenWrt",
             "description": "另一个流行的OpenWrt分支",
             "repository": "https://github.com/Lienol/openwrt.git",
-            "branch": "24.10",
+            "branch": "25.12",
+            "branches": [
+                "25.12",
+                "24.10",
+                "23.05",
+                "19.07"
+            ],
             "stability": "stable",
             "recommended": false,
             "features": [
