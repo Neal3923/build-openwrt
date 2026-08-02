@@ -205,7 +205,10 @@
             "repository": "https://github.com/coolsnowwolf/lede.git",
             "branch": "master",
             "branches": [
-                "master"
+                "master",
+                "20251001",
+                "20230609",
+                "20221001"
             ],
             "stability": "stable",
             "recommended": true,

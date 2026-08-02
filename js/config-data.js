@@ -92,12 +92,15 @@ const SOURCE_BRANCHES = {
   },
   'lede-master': {
     name: "Lean's LEDE",
-    description: '国内热门分支，集成大量插件',
+    description: '国内热门源码，可选择 master 或历史稳定快照',
     repo: 'https://github.com/coolsnowwolf/lede',
     branch: 'master',
     defaultBranch: 'master',
     branches: [
-      { value: 'master', label: 'master' }
+      { value: 'master', label: 'master（开发版）' },
+      { value: '20251001', label: '20251001（稳定快照）' },
+      { value: '20230609', label: '20230609（历史快照）' },
+      { value: '20221001', label: '20221001（历史快照）' }
     ],
     recommended: true,
     stability: '中',
