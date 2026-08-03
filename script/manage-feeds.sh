@@ -26,7 +26,8 @@ declare -A PLUGIN_FEEDS_MAP=(
     
     # 其他常用插件
     ["luci-app-adguardhome"]="src-git adguardhome https://github.com/rufengsuixing/luci-app-adguardhome"
-    ["luci-theme-argon"]="src-git argon https://github.com/jerrykuku/luci-theme-argon;src-git argon_config https://github.com/jerrykuku/luci-app-argon-config"
+    # Argon两个仓库的Makefile位于仓库根目录，不符合独立feed目录结构。
+    # smart-build.yml会将它们直接克隆到package/community。
     ["luci-app-pushbot"]="src-git pushbot https://github.com/zzsj0928/luci-app-pushbot"
 )
 
