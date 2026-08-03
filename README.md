@@ -114,7 +114,6 @@ https://your-username.github.io/your-repo-name
 2. **配置 GitHub Token**（首次使用）
    - 点击页面右上角的 "⚙️ 配置" 按钮
    - 在弹出的对话框中输入你的 GitHub Token
-   - 点击 "测试连接" 验证 Token 有效性
    - 确认后保存配置
 
 3. **选择编译配置**
@@ -125,7 +124,6 @@ https://your-username.github.io/your-repo-name
 4. **开始编译**
    - 检查配置信息
    - 点击 "🚀 开始编译" 按钮
-   - 系统会自动跳转到 GitHub Actions 页面
 
 5. **监控编译进度**
    - 在 GitHub Actions 页面查看实时日志
@@ -145,8 +143,6 @@ https://your-username.github.io/your-repo-name
 - **X86_64 软路由** - 高性能，支持虚拟化
 - **虚拟机 (VMware/VirtualBox)** - 测试环境
 - **工控机/迷你主机** - 企业级应用
-
-当前仅支持 **X86_64** 目标，不再提供 ARM、MIPS 路由器及 X86 32位目标。
 
 ### 功能插件说明
 
@@ -196,13 +192,8 @@ https://your-username.github.io/your-repo-name
    ✅ OpenClash 需要 iptables 支持
    ```
 
-3. **存储限制** - 根据设备存储容量提醒
-   ```
-   ⚠️  16MB 设备建议选择 ≤ 10 个基础插件
-   ⚠️  32MB 设备建议选择 ≤ 20 个常用插件
-   ```
 
-4. **架构兼容性** - 当前构建固定为 X86_64，插件必须支持该架构
+4. **架构兼容性** - 当前构建固定为 X86_64
 
 ## 📊 编译监控与日志
 
@@ -264,64 +255,12 @@ CONFIG_VDI_IMAGES=y                  # 生成 VDI 镜像
 CONFIG_VMDK_IMAGES=y                 # 生成 VMDK 镜像
 ```
 
-## 🚨 故障排除
-
-### 常见编译错误
-
-#### 1. 存储空间不足
-```bash
-错误信息: "No space left on device"
-解决方案: 
-- 减少插件选择数量
-- 启用体积优化选项
-- 选择存储更大的设备
-```
-
-#### 2. 插件冲突
-```bash
-错误信息: "Package conflicts detected"
-解决方案:
-- 使用内置冲突检测功能
-- 手动移除冲突的插件
-- 查看编译日志确定具体冲突
-```
-
-#### 3. 网络下载失败
-```bash
-错误信息: "Download failed"
-解决方案:
-- 检查网络连接状态
-- 重新触发编译任务
-- 使用国内镜像源（Lean's LEDE）
-```
-
-#### 4. 编译超时
-```bash
-错误信息: "Build timeout"
-解决方案:
-- 减少插件数量
-- 选择稳定的源码分支
-- 避免在高峰期编译
-```
-
 ### GitHub Actions 配额
 
 - **免费账户**: 每月 2000 分钟运行时间
 - **Pro 账户**: 每月 3000 分钟运行时间  
 - **单次编译**: 通常需要 60-180 分钟
 - **建议**: 合理安排编译频率，避免浪费配额
-
-### 固件刷写注意事项
-
-⚠️ **刷机有风险，操作需谨慎**
-
-1. **设备确认** - 确认设备型号和硬件版本
-2. **备份固件** - 刷机前备份原厂固件
-3. **救砖准备** - 确保有救砖方法（TTL、短接等）
-4. **测试验证** - 建议先在虚拟机中测试
-5. **稳定电源** - 刷机过程中保持电源稳定
-
-X86 固件通常作为磁盘镜像写入物理磁盘，或直接挂载到 VMware、VirtualBox、PVE 等虚拟机。写盘前务必核对目标磁盘，避免覆盖数据。
 
 ## 📁 项目结构
 
@@ -440,22 +379,7 @@ copies or substantial portions of the Software.
 - **[Lean's LEDE](https://github.com/coolsnowwolf/lede)** - 国内热门 OpenWrt 分支
 - **[ImmortalWrt](https://github.com/immortalwrt/immortalwrt)** - OpenWrt 增强版
 - **[GitHub Actions](https://github.com/features/actions)** - 自动化构建服务
-- **所有贡献者** - 感谢每一位提交代码和建议的开发者
-
-## 📞 技术支持
-
-### 获取帮助
-- 🐛 **Bug 报告**: [提交 Issue](https://github.com/bianyibushu/build-openwrt/issues/new?template=bug_report.md)
-- 💡 **功能建议**: [功能请求](https://github.com/bianyibushu/build-openwrt/issues/new?template=feature_request.md)
-- 💬 **讨论交流**: [GitHub Discussions](https://github.com/bianyibushu/build-openwrt/discussions)
-- 📖 **使用文档**: [项目 Wiki](https://github.com/bianyibushu/build-openwrt/wiki)
-
-### 社区交流
-
-- 📱 **QQ 群**: 123456789（OpenWrt 智能编译）
-- 💬 **微信群**: 扫码加入（请备注：OpenWrt编译）
-- 🌐 **官方网站**: https://bianyibushu.github.io/build-openwrt
-- 📧 **邮件联系**: code@bianyibushu.com
+- 感谢每一位提交代码和建议的开发者
 
 ### 常见问题 FAQ
 
@@ -483,5 +407,3 @@ A: 下载编译产物中的固件文件，使用设备官方刷机工具或第�
 🍴 **Fork 项目开始你的 OpenWrt 编译之旅**
 
 ---
-
-*最后更新时间: 2025年6月*
