@@ -170,8 +170,7 @@ create_default_build_config() {
   },
   "github_actions": {
     "workflow_file": "smart-build.yml",
-    "timeout": 6,
-    "artifact_retention": 7
+    "timeout": 6
   }
 }
 EOF

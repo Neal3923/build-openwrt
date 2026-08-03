@@ -393,8 +393,7 @@ class OpenWrtBuilder {
         if (this.currentBuildId) {
             this.buildHistory.updateRecord(this.currentBuildId, {
                 status: 'success',
-                completedAt: Date.now(),
-                artifacts: buildData.artifacts
+                completedAt: Date.now()
             });
         }
 

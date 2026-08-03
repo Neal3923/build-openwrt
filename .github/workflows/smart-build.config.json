@@ -17,12 +17,10 @@
     "features": {
         "smartBuildEnabled": true,
         "universalBuildDisabled": false,
-        "autoCleanup": true,
-        "artifactRetentionDays": 7
+        "autoCleanup": true
     },
     "notifications": {
         "onSuccess": true,
-        "onFailure": true,
-        "includeArtifactLinks": true
+        "onFailure": true
     }
 }
