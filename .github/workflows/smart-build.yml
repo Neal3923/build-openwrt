@@ -594,6 +594,8 @@ jobs:
           # 新版源码使用DEVICE_generic；Lienol 19.07仍使用旧Profile符号Generic。
           CONFIG_TARGET_x86_64_DEVICE_generic=y
           CONFIG_TARGET_x86_64_Generic=y
+          # LuCI 翻译包是隐藏配置，必须通过语言总开关启用。
+          CONFIG_LUCI_LANG_zh_Hans=y
           EOF
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=$ROOTFS_PARTSIZE" >> .config
 
