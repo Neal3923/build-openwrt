@@ -226,6 +226,35 @@ jobs:
           fi
 
           echo "  实际分支: $REPO_BRANCH"
+
+          # Bandix依赖Linux 6.x，上游仅推荐OpenWrt 24.10及以上版本。
+          if [[ ",$PLUGINS_LIST," == *",luci-app-bandix,"* ]]; then
+            case "$SOURCE_BRANCH:$REPO_BRANCH" in
+              openwrt-main:main|openwrt-main:openwrt-25.12|openwrt-main:openwrt-24.10|\
+              lede-master:master|lede-master:20251001|\
+              immortalwrt-master:master|immortalwrt-master:openwrt-25.12|immortalwrt-master:openwrt-24.10|\
+              Lienol-master:25.12|Lienol-master:24.10)
+                ;;
+              *)
+                echo "::error::Bandix仅支持Linux 6.x及OpenWrt 24.10以上分支，当前为 $SOURCE_BRANCH / $REPO_BRANCH"
+                exit 1
+                ;;
+            esac
+          fi
+
+          # Argon master仅面向现代LuCI；Lean's LEDE需要旧的18.06配置插件，不能混用。
+          if [[ ",$PLUGINS_LIST," == *",luci-theme-argon,"* ]]; then
+            case "$SOURCE_BRANCH:$REPO_BRANCH" in
+              openwrt-main:main|openwrt-main:openwrt-25.12|openwrt-main:openwrt-24.10|\
+              immortalwrt-master:master|immortalwrt-master:openwrt-25.12|immortalwrt-master:openwrt-24.10|\
+              Lienol-master:25.12|Lienol-master:24.10)
+                ;;
+              *)
+                echo "::error::Argon当前版本仅支持现代LuCI的OpenWrt/ImmortalWrt及Lienol 24.10以上分支，当前为 $SOURCE_BRANCH / $REPO_BRANCH"
+                exit 1
+                ;;
+            esac
+          fi
           
           # 本项目只构建x86_64，拒绝旧页面或手工请求传入的其他设备值。
           if [ "$TARGET_DEVICE" != "x86_64" ]; then
@@ -392,6 +421,8 @@ jobs:
         id: codes
         working-directory: /workdir
         if: steps.init.outputs.status == 'success' && !cancelled()
+        env:
+          PLUGINS_LIST: ${{ needs.prepare.outputs.plugins_list }}
         run: |
           echo "📦 开始克隆源码..."
           echo "  仓库: ${{ needs.prepare.outputs.repo_url }}"
@@ -405,6 +436,17 @@ jobs:
             --branch "${{ needs.prepare.outputs.repo_branch }}" \
             "${{ needs.prepare.outputs.repo_url }}" openwrt
           ln -sfn /workdir/openwrt "$GITHUB_WORKSPACE/openwrt"
+
+          if [[ ",$PLUGINS_LIST," == *",luci-app-bandix,"* ]]; then
+            KERNEL_PATCHVER=$(sed -n \
+              's/^[[:space:]]*KERNEL_PATCHVER[[:space:]]*:=[[:space:]]*//p' \
+              openwrt/target/linux/x86/Makefile | head -n 1)
+            if [[ ! "$KERNEL_PATCHVER" =~ ^6\. ]]; then
+              echo "::error::Bandix要求Linux 6.x，当前x86内核版本为: ${KERNEL_PATCHVER:-未知}"
+              exit 1
+            fi
+            echo "✅ Bandix内核兼容性检查通过: Linux $KERNEL_PATCHVER"
+          fi
           
           echo "status=success" >> "$GITHUB_OUTPUT"
           echo "✅ 源码克隆完成"
@@ -523,10 +565,32 @@ jobs:
           # Intel与AMD的KVM处理器模块不能同时选择。选中任一模块时，
           # 同时显式加入KVM核心包，并为Linux 6.12+启用Hyper-V模拟能力。
           KVM_CPU_PACKAGES=()
+          RUNTIME_DISABLED_FEEDS=()
+          COMPANION_PLUGINS=()
+          BANDIX_SELECTED=false
           for plugin in "${USER_PLUGINS[@]}"; do
             case "$plugin" in
               kmod-kvm-intel|kmod-kvm-amd)
                 KVM_CPU_PACKAGES+=("$plugin")
+                ;;
+              luci-app-passwall)
+                # 这两个feed只用于编译PassWall源码，OpenWrt官方软件源并不发布
+                # 对应的运行时APK仓库。设为m会保留编译能力，但在固件中默认注释源。
+                RUNTIME_DISABLED_FEEDS+=(passwall passwall_packages)
+                ;;
+              luci-app-diskman)
+                # DiskMan是源码feed，不是OpenWrt官方二进制仓库。
+                RUNTIME_DISABLED_FEEDS+=(diskman)
+                ;;
+              luci-app-bandix)
+                # Bandix的前端和后端feed都只用于本次源码构建。
+                RUNTIME_DISABLED_FEEDS+=(bandix bandix_luci)
+                BANDIX_SELECTED=true
+                ;;
+              luci-theme-argon)
+                # 同时安装Argon设置界面；两个feed都不应成为运行时软件源。
+                COMPANION_PLUGINS+=(luci-app-argon-config)
+                RUNTIME_DISABLED_FEEDS+=(argon argon_config)
                 ;;
             esac
           done
@@ -544,7 +608,7 @@ jobs:
           fi
 
           mapfile -t ALL_PLUGINS < <(
-            printf '%s\n' "${RECOMMENDED_PLUGINS[@]}" "${USER_PLUGINS[@]}" |
+            printf '%s\n' "${RECOMMENDED_PLUGINS[@]}" "${USER_PLUGINS[@]}" "${COMPANION_PLUGINS[@]}" |
               sed '/^$/d' | sort -u
           )
 
@@ -557,9 +621,50 @@ jobs:
             echo "CONFIG_PACKAGE_$plugin=y" >> .config
             echo "  ✓ 添加插件: $plugin"
           done
+
+          for feed in "${RUNTIME_DISABLED_FEEDS[@]}"; do
+            echo "CONFIG_FEED_${feed}=m" >> .config
+            echo "  ✓ 禁用无效的运行时软件源: $feed"
+          done
+
+          if [ "$BANDIX_SELECTED" = "true" ]; then
+            # Turbo ACC会绕过Bandix的流量统计路径，明确禁止进入固件。
+            echo '# CONFIG_PACKAGE_luci-app-turboacc is not set' >> .config
+          fi
           
           # 生成最终配置
           make defconfig
+
+          if [ "$BANDIX_SELECTED" = "true" ]; then
+            if grep -qx 'CONFIG_PACKAGE_luci-app-turboacc=y' .config; then
+              echo "::error::Bandix与Turbo ACC不能同时启用"
+              exit 1
+            fi
+
+            # 新装或保留配置升级时都关闭硬件流量卸载，确保Bandix统计完整。
+            mkdir -p files/etc/uci-defaults
+            cat > files/etc/uci-defaults/99-bandix-disable-hw-offload << 'EOF'
+          #!/bin/sh
+          uci -q set firewall.@defaults[0].flow_offloading_hw='0'
+          uci -q commit firewall
+          exit 0
+          EOF
+            chmod 0755 files/etc/uci-defaults/99-bandix-disable-hw-offload
+            echo "✅ 已配置Bandix：禁用硬件流量卸载和Turbo ACC"
+          fi
+
+          # CONFIG_FEED_x=m是OpenWrt官方提供的“在固件中默认注释该源”机制。
+          # 不支持独立feed仓库的旧分支不会生成这些源，也不需要额外处理。
+          if grep -qx 'CONFIG_PER_FEED_REPO=y' .config; then
+            for feed in "${RUNTIME_DISABLED_FEEDS[@]}"; do
+              if ! grep -qx "CONFIG_FEED_${feed}=m" .config; then
+                echo "::error::未能禁用运行时软件源: $feed"
+                exit 1
+              fi
+            done
+          elif (( ${#RUNTIME_DISABLED_FEEDS[@]} > 0 )); then
+            echo "ℹ️ 当前源码未启用独立feed仓库，不会写入PassWall运行时软件源"
+          fi
 
           # 目标配置不能被defconfig静默丢弃，否则会构建到错误的平台。
           REQUIRED_X86_CONFIG=(
@@ -589,6 +694,14 @@ jobs:
               echo "::error::x86_64基础包不存在或未成功启用: $plugin"
               exit 1
             fi
+          done
+
+          for plugin in "${COMPANION_PLUGINS[@]}"; do
+            if ! grep -qx "CONFIG_PACKAGE_${plugin}=y" .config; then
+              echo "::error::配套插件不存在或未成功启用: $plugin"
+              exit 1
+            fi
+            echo "  ✅ 已启用配套插件: $plugin"
           done
 
           # make defconfig会静默丢弃不存在的包，必须验证用户选择确实生效。

@@ -419,6 +419,9 @@ EOF
 
 # ======================== Argon 主题 ========================
 CONFIG_PACKAGE_luci-theme-argon=y
+CONFIG_PACKAGE_luci-app-argon-config=y
+CONFIG_FEED_argon=m
+CONFIG_FEED_argon_config=m
 
 EOF
             ;;

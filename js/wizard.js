@@ -312,6 +312,24 @@ class WizardManager {
             system: {
                 name: '⚙️ 系统管理',
                 plugins: {
+                    'luci-app-bandix': {
+                        name: 'Bandix 流量监控',
+                        description: '实时流量统计（自动关闭硬件流量卸载）',
+                        supported_source_branches: {
+                            'openwrt-main': ['main', 'openwrt-25.12', 'openwrt-24.10'],
+                            'lede-master': ['master', '20251001'],
+                            'immortalwrt-master': ['master', 'openwrt-25.12', 'openwrt-24.10'],
+                            'Lienol-master': ['25.12', '24.10']
+                        },
+                        size: '5M',
+                        stability: 'stable'
+                    },
+                    'luci-app-diskman': {
+                        name: 'DiskMan 磁盘管理',
+                        description: '磁盘分区、格式化及存储管理',
+                        size: '8M',
+                        stability: 'stable'
+                    },
                     'luci-app-ttyd': {
                         name: 'TTYD终端',
                         description: 'Web终端访问',
@@ -322,6 +340,22 @@ class WizardManager {
                         name: 'UPnP',
                         description: '端口自动映射',
                         size: '0.5M',
+                        stability: 'stable'
+                    }
+                }
+            },
+            theme: {
+                name: '🎨 界面主题',
+                plugins: {
+                    'luci-theme-argon': {
+                        name: 'Argon 主题',
+                        description: '暗色/亮色自适应，包含主题设置界面',
+                        supported_source_branches: {
+                            'openwrt-main': ['main', 'openwrt-25.12', 'openwrt-24.10'],
+                            'immortalwrt-master': ['master', 'openwrt-25.12', 'openwrt-24.10'],
+                            'Lienol-master': ['25.12', '24.10']
+                        },
+                        size: '2M',
                         stability: 'stable'
                     }
                 }
@@ -701,7 +735,7 @@ class WizardManager {
             conflicts.forEach(conflict => {
                 html += `
                     <div class="conflict-item">
-                        <div class="conflict-type">插件冲突</div>
+                        <div class="conflict-type">${conflict.type === 'unsupported_branch' ? '版本不兼容' : '插件冲突'}</div>
                         <div class="conflict-message">${conflict.message}</div>
                     </div>
                 `;
@@ -882,6 +916,11 @@ class WizardManager {
 
             // 检查插件冲突
             const conflicts = this.detectPluginConflicts();
+            const unsupportedPlugins = conflicts.filter(conflict => conflict.type === 'unsupported_branch');
+            if (unsupportedPlugins.length > 0) {
+                alert(unsupportedPlugins.map(conflict => conflict.message).join('\n'));
+                return;
+            }
             if (conflicts.length > 0) {
                 const proceed = confirm(`检测到 ${conflicts.length} 个插件冲突，是否继续？\n\n${conflicts.map(c => c.message).join('\n')}`);
                 if (!proceed) return;
@@ -1264,33 +1303,52 @@ class WizardManager {
 
     detectPluginConflicts() {
         const selectedPlugins = this.config.plugins;
-
-        if (typeof window.detectPluginConflicts === 'function') {
-            return window.detectPluginConflicts(selectedPlugins);
-        }
-
-        // config-data.js不可用时的基础回退检测
         const conflicts = [];
 
-        const proxyPlugins = ['luci-app-ssr-plus', 'luci-app-passwall', 'luci-app-openclash'];
-        const selectedProxy = selectedPlugins.filter(plugin => proxyPlugins.includes(plugin));
+        if (typeof window.detectPluginConflicts === 'function') {
+            conflicts.push(...window.detectPluginConflicts(selectedPlugins));
+        } else {
+            // config-data.js不可用时的基础回退检测
+            const proxyPlugins = ['luci-app-ssr-plus', 'luci-app-passwall', 'luci-app-openclash'];
+            const selectedProxy = selectedPlugins.filter(plugin => proxyPlugins.includes(plugin));
 
-        if (selectedProxy.length > 1) {
-            conflicts.push({
-                type: 'mutual_exclusive',
-                plugins: selectedProxy,
-                message: `代理插件冲突：${selectedProxy.join(', ')} 不能同时选择`
-            });
+            if (selectedProxy.length > 1) {
+                conflicts.push({
+                    type: 'mutual_exclusive',
+                    plugins: selectedProxy,
+                    message: `代理插件冲突：${selectedProxy.join(', ')} 不能同时选择`
+                });
+            }
+
+            const kvmPlugins = ['kmod-kvm-intel', 'kmod-kvm-amd'];
+            const selectedKvmPlugins = selectedPlugins.filter(plugin => kvmPlugins.includes(plugin));
+            if (selectedKvmPlugins.length > 1) {
+                conflicts.push({
+                    type: 'mutual_exclusive',
+                    plugins: selectedKvmPlugins,
+                    message: `KVM处理器模块冲突：${selectedKvmPlugins.join(', ')} 不能同时选择`
+                });
+            }
         }
 
-        const kvmPlugins = ['kmod-kvm-intel', 'kmod-kvm-amd'];
-        const selectedKvmPlugins = selectedPlugins.filter(plugin => kvmPlugins.includes(plugin));
-        if (selectedKvmPlugins.length > 1) {
-            conflicts.push({
-                type: 'mutual_exclusive',
-                plugins: selectedKvmPlugins,
-                message: `KVM处理器模块冲突：${selectedKvmPlugins.join(', ')} 不能同时选择`
-            });
+        for (const pluginKey of selectedPlugins) {
+            let pluginConfig = null;
+            for (const category of Object.values(this.pluginConfigs)) {
+                if (category.plugins?.[pluginKey]) {
+                    pluginConfig = category.plugins[pluginKey];
+                    break;
+                }
+            }
+
+            const supportedBranches = pluginConfig?.supported_source_branches?.[this.config.source];
+            if (pluginConfig?.supported_source_branches &&
+                (!Array.isArray(supportedBranches) || !supportedBranches.includes(this.config.repoBranch))) {
+                conflicts.push({
+                    type: 'unsupported_branch',
+                    plugins: [pluginKey],
+                    message: `${pluginConfig.name}仅支持Linux 6.x及OpenWrt 24.10以上分支`
+                });
+            }
         }
 
         return conflicts;
