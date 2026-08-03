@@ -255,6 +255,21 @@ init_plugin_database() {
           "size": "~200KB",
           "complexity": "low",
           "priority": 1
+        },
+        "luci-app-bandix": {
+          "name": "Bandix 流量监控",
+          "description": "实时流量统计与分析；构建时自动关闭硬件流量卸载",
+          "author": "timsaya",
+          "feeds": [
+            "src-git bandix https://github.com/timsaya/openwrt-bandix",
+            "src-git bandix_luci https://github.com/timsaya/luci-app-bandix"
+          ],
+          "feeds_comment": "仅支持Linux 6.x及OpenWrt 24.10以上版本",
+          "dependencies": ["bandix", "curl", "luci-lib-jsonc"],
+          "conflicts": [],
+          "size": "~5MB",
+          "complexity": "medium",
+          "priority": 2
         }
       }
     },
@@ -327,6 +342,18 @@ init_plugin_database() {
           "size": "~100KB",
           "complexity": "low",
           "priority": 1
+        },
+        "luci-app-diskman": {
+          "name": "DiskMan 磁盘管理",
+          "description": "磁盘分区、格式化及存储管理",
+          "author": "lisaac",
+          "feeds": ["src-git diskman https://github.com/lisaac/luci-app-diskman"],
+          "feeds_comment": "DiskMan编译源码；不作为固件运行时软件源",
+          "dependencies": ["parted", "smartmontools", "e2fsprogs", "blkid"],
+          "conflicts": [],
+          "size": "~8MB",
+          "complexity": "medium",
+          "priority": 2
         },
         "luci-app-dockerman": {
           "name": "Docker管理",
@@ -407,12 +434,15 @@ init_plugin_database() {
       "description": "LuCI界面主题",
       "plugins": {
         "luci-theme-argon": {
-          "name": "Argon主题",
-          "description": "美观的LuCI主题",
+          "name": "Argon主题（含设置插件）",
+          "description": "支持暗色/亮色自适应和背景、透明度设置",
           "author": "jerrykuku",
-          "feeds": ["src-git argon https://github.com/jerrykuku/luci-theme-argon"],
-          "feeds_comment": "Argon主题源",
-          "dependencies": [],
+          "feeds": [
+            "src-git argon https://github.com/jerrykuku/luci-theme-argon",
+            "src-git argon_config https://github.com/jerrykuku/luci-app-argon-config"
+          ],
+          "feeds_comment": "仅支持现代LuCI；两个feed均只用于源码编译",
+          "dependencies": ["luci-app-argon-config"],
           "conflicts": ["luci-theme-material", "luci-theme-netgear"],
           "size": "~1MB",
           "complexity": "low",

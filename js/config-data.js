@@ -208,6 +208,20 @@ const PLUGIN_CONFIGS = {
         description: '端口自动映射',
         size: '0.5M',
         stability: 'stable'
+      },
+      'luci-app-bandix': {
+        name: 'Bandix 流量监控',
+        description: '实时流量统计（自动关闭硬件流量卸载）',
+        requires: ['bandix', 'curl'],
+        arch_limit: ['x86'],
+        supported_source_branches: {
+          'openwrt-main': ['main', 'openwrt-25.12', 'openwrt-24.10'],
+          'lede-master': ['master', '20251001'],
+          'immortalwrt-master': ['master', 'openwrt-25.12', 'openwrt-24.10'],
+          'Lienol-master': ['25.12', '24.10']
+        },
+        size: '5M',
+        stability: 'stable'
       }
     }
   },
@@ -222,6 +236,14 @@ const PLUGIN_CONFIGS = {
         requires: ['docker-ce'],
         arch_limit: ['x86', 'arm64'],
         size: '50M',
+        stability: 'stable'
+      },
+      'luci-app-diskman': {
+        name: 'DiskMan 磁盘管理',
+        description: '磁盘分区、格式化及存储管理',
+        requires: ['parted', 'smartmontools', 'e2fsprogs'],
+        arch_limit: ['x86'],
+        size: '8M',
         stability: 'stable'
       },
       'kmod-kvm-intel': {
@@ -285,6 +307,25 @@ const PLUGIN_CONFIGS = {
         stability: 'stable'
       }
     }
+  },
+
+  // 界面主题类
+  theme: {
+    name: '🎨 界面主题',
+    plugins: {
+      'luci-theme-argon': {
+        name: 'Argon 主题',
+        description: '暗色/亮色自适应，包含主题设置界面',
+        requires: ['luci-app-argon-config'],
+        supported_source_branches: {
+          'openwrt-main': ['main', 'openwrt-25.12', 'openwrt-24.10'],
+          'immortalwrt-master': ['master', 'openwrt-25.12', 'openwrt-24.10'],
+          'Lienol-master': ['25.12', '24.10']
+        },
+        size: '2M',
+        stability: 'stable'
+      }
+    }
   }
 };
 
@@ -308,6 +349,8 @@ const CONFLICT_RULES = {
   // 架构限制
   arch_restrictions: {
     'luci-app-dockerman': ['x86', 'arm64'],
+    'luci-app-diskman': ['x86'],
+    'luci-app-bandix': ['x86'],
     'kmod-kvm-intel': ['x86'],
     'kmod-kvm-amd': ['x86']
   },

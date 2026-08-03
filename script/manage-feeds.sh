@@ -17,6 +17,12 @@ declare -A PLUGIN_FEEDS_MAP=(
     
     # OpenClash
     ["luci-app-openclash"]="src-git openclash https://github.com/vernesong/OpenClash"
+
+    # DiskMan
+    ["luci-app-diskman"]="src-git diskman https://github.com/lisaac/luci-app-diskman"
+
+    # Bandix前端和后端
+    ["luci-app-bandix"]="src-git bandix https://github.com/timsaya/openwrt-bandix;src-git bandix_luci https://github.com/timsaya/luci-app-bandix"
     
     # 其他常用插件
     ["luci-app-adguardhome"]="src-git adguardhome https://github.com/rufengsuixing/luci-app-adguardhome"
