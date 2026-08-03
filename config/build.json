@@ -13,7 +13,6 @@
         "default_plugins": [
             "luci-theme-bootstrap"
         ],
-        "auto_fix_enabled": true,
         "parallel_jobs": 0,
         "timeout_minutes": 360,
         "retry_on_failure": true,
@@ -24,7 +23,6 @@
         "config_generator": {
             "script": "script/generate-config.sh",
             "enabled": true,
-            "auto_fix": true,
             "interface_version": "2.0",
             "fallback_enabled": true,
             "timeout_seconds": 300,
@@ -45,19 +43,6 @@
                 "auto_conflict_check": true,
                 "compatibility_check": true,
                 "dependency_resolution": true
-            }
-        },
-        "build_fixer": {
-            "script": "script/fixes/fix-build-issues.sh",
-            "enabled": true,
-            "auto_detect": true,
-            "interface_version": "1.0",
-            "fallback_enabled": false,
-            "timeout_seconds": 600,
-            "parameters": {
-                "aggressive_fix": false,
-                "backup_before_fix": true,
-                "verify_after_fix": true
             }
         }
     },
@@ -189,11 +174,6 @@
                 "skip_conflicting_plugins",
                 "use_lightweight_alternatives",
                 "disable_optional_dependencies"
-            ],
-            "build_fixes": [
-                "clean_build_cache",
-                "reset_to_default_patches",
-                "disable_problematic_packages"
             ]
         }
     },
