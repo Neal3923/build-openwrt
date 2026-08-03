@@ -2,6 +2,7 @@
 # 支持通过Web界面触发的自动化编译，解决Ubuntu 20.04弃用问题
 
 name: 🛠️ OpenWrt 智能编译
+run-name: "OpenWrt · ${{ github.event.client_payload.build_id || inputs.build_description || github.run_number }}"
 
 permissions:
   contents: read

@@ -162,23 +162,26 @@
                 <div class="monitor-header">
                     <h2>📊 编译进度监控</h2>
                     <div class="monitor-actions">
-                        <button class="btn btn-secondary" onclick="window.wizardManager.stopMonitoring()">
+                        <button class="btn btn-secondary" onclick="window.buildMonitor.stopByUser()">
                             🛑 停止监控
                         </button>
-                        <button class="btn btn-secondary"
-                            onclick="window.open(`https://github.com/${GITHUB_REPO}/actions`, '_blank')">
+                        <a id="view-actions-btn" class="btn btn-secondary"
+                            href="https://github.com/Neal3923/build-openwrt/actions" target="_blank"
+                            rel="noopener noreferrer">
                             🔗 查看GitHub Actions
-                        </button>
+                        </a>
                     </div>
                 </div>
 
                 <!-- 进度条 -->
                 <div class="progress-container">
                     <div class="progress-bar-container">
-                        <div id="progress-bar" class="progress-bar"></div>
+                        <div id="progress-bar" class="progress-bar" role="progressbar" aria-valuemin="0"
+                            aria-valuemax="100" aria-valuenow="0"></div>
                     </div>
+                    <div id="progress-stage" class="progress-stage">准备提交编译任务</div>
                     <div class="progress-info">
-                        <span id="progress-text">0%</span>
+                        <span id="progress-text">阶段 0/18</span>
                         <span id="progress-time">准备中...</span>
                     </div>
                 </div>
@@ -186,7 +189,7 @@
                 <!-- 编译日志 -->
                 <div class="logs-container">
                     <div class="logs-header">
-                        <h3>📝 编译日志</h3>
+                        <h3>📝 编译状态记录</h3>
                         <button class="btn btn-small" onclick="document.getElementById('logs-content').innerHTML = ''">
                             🗑️ 清空日志
                         </button>
@@ -243,9 +246,8 @@
     <!-- JavaScript文件引入 -->
     <script src="js/config-data.js"></script>
     <script src="js/token-modal.js"></script>
-    <script src="js/build-monitor.js"></script> <!-- 新增 -->
+    <script src="js/build-monitor.js"></script>
     <script src="js/wizard.js"></script>
-    <script src="js/builder.js"></script>
 
     <!-- 页面初始化脚本 -->
     <script>

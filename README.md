@@ -8,7 +8,7 @@
 - 🎯 **可视化配置** - 通过Web界面轻松选择设备和插件
 - 🚀 **智能编译** - 基于GitHub Actions云端编译，无需本地环境
 - 🔍 **冲突检测** - 自动检测插件冲突和依赖关系
-- 📊 **实时监控** - 编译进度实时反馈和日志查看
+- 📊 **实时监控** - 按 GitHub Actions 实际步骤显示阶段和耗时
 - 🌐 **多源支持** - 支持官方OpenWrt、Lean's LEDE、ImmortalWrt等源码
 - 📱 **响应式设计** - 完美适配桌面和移动设备
 
@@ -124,9 +124,11 @@ https://your-username.github.io/your-repo-name
 4. **开始编译**
    - 检查配置信息
    - 点击 "🚀 开始编译" 按钮
+   - 系统会自动连接本次 GitHub Actions 任务
 
 5. **监控编译进度**
-   - 在 GitHub Actions 页面查看实时日志
+   - 在网页查看实际工作流阶段、状态记录和已运行时间
+   - 刷新页面后会自动恢复当前任务的监控
    - 编译完成后下载固件文件
 
 ### 支持的源码分支
@@ -195,7 +197,7 @@ https://your-username.github.io/your-repo-name
 
 4. **架构兼容性** - 当前构建固定为 X86_64
 
-## 📊 编译监控与日志
+## 📊 编译进度监控
 
 ### 编译状态
 
@@ -206,10 +208,10 @@ https://your-username.github.io/your-repo-name
 
 ### 实时监控
 
-1. **进度跟踪** - 实时显示编译进度百分比
-2. **日志查看** - 详细的编译过程日志
-3. **耗时统计** - 显示编译开始和结束时间
-4. **资源使用** - 显示 CPU、内存、存储使用情况
+1. **阶段跟踪** - 根据 GitHub Actions 已完成的实际步骤计算阶段进度
+2. **状态记录** - 仅在步骤开始、完成、跳过或失败时添加记录
+3. **耗时统计** - 持续显示已经运行的时间
+4. **断点恢复** - 刷新页面后继续监控同一次编译任务
 
 ### 下载固件
 
@@ -273,7 +275,7 @@ openwrt-smart-builder/
 ├── js/
 │   ├── config-data.js            # 配置数据文件 🔧
 │   ├── wizard.js                 # 向导逻辑控制
-│   ├── builder.js                # 编译控制逻辑
+│   ├── build-monitor.js          # GitHub Actions 阶段监控
 │   └── token-modal.js            # Token 配置模块
 ├── components/
 │   ├── token-modal.html          # Token 配置界面

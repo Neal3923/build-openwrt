@@ -841,11 +841,47 @@ body {
 }
 
 .progress-bar {
+  position: relative;
   height: 100%;
   background: linear-gradient(90deg, #667eea, #764ba2);
   width: 0%;
+  min-width: 0;
   transition: width 0.5s ease;
   border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar.is-active {
+  min-width: 2.5rem;
+}
+
+.progress-bar.is-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: monitor-shimmer 1.8s linear infinite;
+}
+
+.progress-bar.is-success {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.progress-bar.is-failed {
+  background: linear-gradient(90deg, #dc2626, #f97316);
+}
+
+.progress-stage {
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-weight: 700;
+}
+
+@keyframes monitor-shimmer {
+  to {
+    transform: translateX(100%);
+  }
 }
 
 .progress-info {
