@@ -2,7 +2,7 @@
 # 支持通过Web界面触发的自动化编译，解决Ubuntu 20.04弃用问题
 
 name: 🛠️ OpenWrt 智能编译
-run-name: "OpenWrt · ${{ github.event.client_payload.build_id || inputs.build_description || github.run_number }}"
+run-name: "OpenWrt · ${{ github.event.client_payload.config.build_id || github.event.client_payload.build_id || inputs.build_description || github.run_number }}"
 
 permissions:
   contents: read
@@ -105,11 +105,11 @@ jobs:
         id: config
         env:
           EVENT_NAME: ${{ github.event_name }}
-          DISPATCH_SOURCE_BRANCH: ${{ github.event.client_payload.source_branch }}
-          DISPATCH_REPO_BRANCH: ${{ github.event.client_payload.repo_branch }}
-          DISPATCH_TARGET_DEVICE: ${{ github.event.client_payload.target_device }}
-          DISPATCH_ROOTFS_PARTSIZE: ${{ github.event.client_payload.rootfs_partsize }}
-          DISPATCH_PLUGINS: ${{ github.event.client_payload.plugins }}
+          DISPATCH_SOURCE_BRANCH: ${{ github.event.client_payload.config.source_branch || github.event.client_payload.source_branch }}
+          DISPATCH_REPO_BRANCH: ${{ github.event.client_payload.config.repo_branch || github.event.client_payload.repo_branch }}
+          DISPATCH_TARGET_DEVICE: ${{ github.event.client_payload.config.target_device || github.event.client_payload.target_device }}
+          DISPATCH_ROOTFS_PARTSIZE: ${{ github.event.client_payload.config.rootfs_partsize || github.event.client_payload.rootfs_partsize }}
+          DISPATCH_PLUGINS: ${{ github.event.client_payload.config.plugins || github.event.client_payload.plugins }}
           INPUT_SOURCE_BRANCH: ${{ github.event.inputs.source_branch }}
           INPUT_REPO_BRANCH: ${{ github.event.inputs.repo_branch }}
           INPUT_TARGET_DEVICE: ${{ github.event.inputs.target_device }}
