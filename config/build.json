@@ -308,14 +308,12 @@
     "github_actions": {
         "workflow_file": "smart-build.yml",
         "timeout_hours": 6,
-        "artifact_retention_days": 7,
         "parallel_builds": false,
         "cache_enabled": true,
         "cache_ttl_days": 7,
         "notification": {
             "on_success": true,
             "on_failure": true,
-            "include_artifact_links": true,
             "include_build_logs": false
         },
         "resource_management": {

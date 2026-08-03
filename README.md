@@ -236,11 +236,10 @@ https://your-username.github.io/your-repo-name
 
 ### 下载固件
 
-编译成功后，在 GitHub Actions 页面的 **Artifacts** 区域下载：
+编译成功后，在仓库的 **Releases** 页面下载：
 
-- `OpenWrt_firmware_xxxx.zip` - 固件文件包
-- `build_logs.zip` - 编译日志文件
-- `config_info.zip` - 编译配置信息
+- `OpenWrt_*` - 对应设备和源码版本的固件文件
+- `sha256sums.txt` - 固件 SHA256 校验信息
 
 ## 🛠️ 高级配置
 

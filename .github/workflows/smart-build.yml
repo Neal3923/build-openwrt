@@ -693,14 +693,6 @@ jobs:
           echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
           echo "status=success" >> $GITHUB_OUTPUT
           echo "✅ 编译产物整理完成"
-      - name: ⬆️ 上传固件到 Artifacts
-        uses: actions/upload-artifact@v7  # 更新到最新版本
-        if: steps.organize.outputs.status == 'success'
-        with:
-          name: ${{ needs.prepare.outputs.build_tag }}
-          path: ${{ env.FIRMWARE_PATH }}
-          retention-days: 7
-
       - name: 🎉 生成发布版本
         id: release
         if: steps.organize.outputs.status == 'success'
@@ -739,7 +731,6 @@ jobs:
           echo "  标签: ${{ needs.prepare.outputs.build_tag }}"
           echo ""
           echo "🔗 下载链接:"
-          echo "  Artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           echo "  Releases: https://github.com/${{ github.repository }}/releases/tag/${{ steps.release.outputs.release_tag }}"
           echo ""
           echo "📝 编译日志: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -766,7 +757,7 @@ jobs:
           echo "🔍 排查顺序:"
           echo "  1. 查看日志中最早出现的 ::error:: 或 Error"
           echo "  2. 检查插件可用性与feeds更新结果"
-          echo "  3. 检查固件编译、Artifact上传和Release发布步骤"
+          echo "  3. 检查固件编译和Release发布步骤"
           echo "  4. 检查网络、磁盘空间或上游源码问题"
           echo ""
           echo "📖 解决建议:"
@@ -836,8 +827,7 @@ jobs:
           echo "  时间: $(date '+%Y-%m-%d %H:%M:%S')"
           echo ""
           echo "📥 下载方式:"
-          echo "  1. GitHub Actions Artifacts (7天有效期)"
-          echo "  2. GitHub Releases (长期保存)"
+          echo "  GitHub Releases (长期保存)"
           echo ""
           echo "🔗 相关链接:"
           echo "  - Actions: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
