@@ -235,12 +235,6 @@ const PLUGIN_CONFIGS = {
         description: '远程开机',
         size: '0.5M',
         stability: 'stable'
-      },
-      'luci-app-netdata': {
-        name: '实时监控',
-        description: '系统性能监控',
-        size: '5M',
-        stability: 'stable'
       }
     }
   },
@@ -383,7 +377,7 @@ function getRecommendedPlugins(device) {
   }
 
   if (device.category === 'x86') {
-    recommended.push('luci-app-dockerman', 'luci-app-netdata');
+    recommended.push('luci-app-dockerman');
   }
 
   return recommended;

@@ -474,11 +474,6 @@ jobs:
             fi
             echo "CONFIG_PACKAGE_$plugin=y" >> .config
             echo "  ✓ 添加插件: $plugin"
-
-            # 新版官方feeds提供netdata本体，但可能不再提供luci-app-netdata。
-            if [ "$plugin" = "luci-app-netdata" ]; then
-              echo "CONFIG_PACKAGE_netdata=y" >> .config
-            fi
           done
           
           # 生成最终配置
@@ -501,7 +496,7 @@ jobs:
             exit 1
           fi
 
-          # 基础包与用户插件都必须存在；只有netdata兼容映射允许降级。
+          # 基础包与用户插件都必须存在。
           for plugin in "${RECOMMENDED_PLUGINS[@]}"; do
             if ! grep -qx "CONFIG_PACKAGE_${plugin}=y" .config; then
               echo "::error::x86_64基础包不存在或未成功启用: $plugin"
@@ -514,8 +509,6 @@ jobs:
           for plugin in "${USER_PLUGINS[@]}"; do
             if grep -qx "CONFIG_PACKAGE_${plugin}=y" .config; then
               echo "  ✅ 已启用用户插件: $plugin"
-            elif [ "$plugin" = "luci-app-netdata" ] && grep -qx "CONFIG_PACKAGE_netdata=y" .config; then
-              echo "::warning::luci-app-netdata不可用，已改用netdata本体"
             else
               echo "::error::插件不存在或未成功启用: $plugin"
               CONFIG_ERRORS=$((CONFIG_ERRORS + 1))
