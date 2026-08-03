@@ -559,22 +559,33 @@ jobs:
           cd openwrt
 
           DOWNLOAD_JOBS=$(( $(nproc) * 2 ))
-          DOWNLOAD_OK=false
-          for attempt in 1 2; do
-            find dl -type f -size -1024c -print -delete 2>/dev/null || true
-            if make download -j"$DOWNLOAD_JOBS"; then
-              DOWNLOAD_OK=true
-              break
-            fi
-            echo "::warning::并行下载第 ${attempt} 次失败"
-            sleep $((attempt * 5))
-          done
+          DOWNLOAD_TARGETS=(
+            tools/download
+            toolchain/download
+            package/download
+            target/download
+          )
 
-          if [ "$DOWNLOAD_OK" != "true" ]; then
-            echo "::warning::并行下载仍失败，切换到单线程详细日志以定位具体依赖"
-            find dl -type f -size -1024c -print -delete 2>/dev/null || true
-            make download -j1 V=s
-          fi
+          # OpenWrt 的总 download 目标使用分号依次执行子目标，前面的失败可能被
+          # 最后一个成功的子目标掩盖。逐项覆盖 DOWNLOAD_DIRS，确保错误能正确传递。
+          for download_target in "${DOWNLOAD_TARGETS[@]}"; do
+            DOWNLOAD_OK=false
+            for attempt in 1 2; do
+              find dl -type f -size -1024c -print -delete 2>/dev/null || true
+              if make download DOWNLOAD_DIRS="$download_target" -j"$DOWNLOAD_JOBS"; then
+                DOWNLOAD_OK=true
+                break
+              fi
+              echo "::warning::${download_target} 并行下载第 ${attempt} 次失败"
+              sleep $((attempt * 5))
+            done
+
+            if [ "$DOWNLOAD_OK" != "true" ]; then
+              echo "::warning::${download_target} 并行下载仍失败，切换到单线程详细日志"
+              find dl -type f -size -1024c -print -delete 2>/dev/null || true
+              make download DOWNLOAD_DIRS="$download_target" -j1 V=s
+            fi
+          done
 
           echo "status=success" >> "$GITHUB_OUTPUT"
           echo "✅ 依赖包下载完成"
