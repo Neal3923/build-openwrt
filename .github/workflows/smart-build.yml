@@ -281,7 +281,11 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
+          set -Eeuo pipefail
+          trap 'echo "::error::编译环境初始化失败（脚本第 ${LINENO} 行）"' ERR
+
           echo "🔧 开始初始化编译环境..."
+          umask 022
           
           # 显示系统信息
           echo "📋 系统信息:"
@@ -289,161 +293,109 @@ jobs:
           echo "💾 磁盘空间:"
           df -h
           
-          # 清理Docker镜像和不必要文件释放空间
+          # 清理不需要的预装工具以释放空间，但绝不能删除APT软件源配置。
           echo "🧹 清理系统空间..."
-          docker rmi $(docker images -q) 2>/dev/null || true
-          [[ -n "${AGENT_TOOLSDIRECTORY}" ]] && sudo rm -rf "${AGENT_TOOLSDIRECTORY}"
-          sudo rm -rf /usr/share/dotnet /etc/apt/sources.list.d /usr/local/lib/android 2>/dev/null || true
+          docker image prune --all --force >/dev/null 2>&1 || true
+          if [[ "${AGENT_TOOLSDIRECTORY:-}" == /opt/hostedtoolcache* ]]; then
+            sudo rm -rf -- "${AGENT_TOOLSDIRECTORY}"
+          fi
+          sudo rm -rf -- /usr/share/dotnet /usr/local/lib/android 2>/dev/null || true
+
+          # Ubuntu 24.04的官方软件源位于/etc/apt/sources.list.d/ubuntu.sources。
+          # 如果软件源缺失，立即停止，避免后续依赖安装被误报为成功。
+          if ! grep -RqsE '^[[:space:]]*(deb |Types:[[:space:]]*deb)' \
+            /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null; then
+            echo "::error::未找到有效的APT软件源配置"
+            exit 1
+          fi
           
           # 更新软件包列表
           echo "🔄 更新软件包列表..."
-          sudo -E apt-get update
+          APT_GET=(sudo -E apt-get -o Acquire::Retries=3)
+          "${APT_GET[@]}" update
+
+          BUILD_ESSENTIAL_CANDIDATE="$(apt-cache policy build-essential | awk '/Candidate:/ { print $2 }')"
+          if [[ -z "$BUILD_ESSENTIAL_CANDIDATE" || "$BUILD_ESSENTIAL_CANDIDATE" == "(none)" ]]; then
+            echo "::error::APT软件源不可用：build-essential没有可安装版本"
+            exit 1
+          fi
           
-          # 清理不必要的软件包 (更安全的方式)
+          # 只卸载实际存在的非必要预装软件，避免libreoffice*产生无意义错误。
           echo "🗑️ 清理不必要的软件包..."
-          sudo -E apt-get remove --purge azure-cli -y || true
-          sudo -E apt-get remove --purge firefox -y || true
-          sudo -E apt-get remove --purge powershell -y || true
-          sudo -E apt-get remove --purge thunderbird -y || true
-          sudo -E apt-get remove --purge libreoffice* -y || true
-          
-          # 分组安装依赖包以提高成功率
-          echo "📦 安装核心构建工具..."
-          sudo -E apt-get install -y \
-            build-essential \
-            cmake \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config \
-            bison \
-            flex \
-            ccache \
-            git \
-            curl \
-            wget \
-            rsync \
-            unzip \
-            bzip2 \
-            gzip \
-            tar \
-            patch \
-            gettext \
-            file \
-            time || echo "⚠️ 某些核心工具安装失败，但可能不影响编译"
-          
-          echo "📚 安装开发库..."
-          sudo -E apt-get install -y \
-            libncurses5-dev \
-            libncursesw5-dev \
-            zlib1g-dev \
-            libssl-dev \
-            libelf-dev \
-            libfuse-dev \
-            libglib2.0-dev \
-            libgmp3-dev \
-            libltdl-dev \
-            libmpc-dev \
-            libmpfr-dev \
-            libreadline-dev \
-            gnutls-dev || echo "⚠️ 某些开发库安装失败，但可能不影响编译"
-          
-          echo "🐍 安装Python环境..."
-          sudo -E apt-get install -y \
-            python3 \
-            python3-dev \
-            python3-pip \
-            python3-setuptools \
-            python3-wheel || echo "⚠️ Python环境安装可能不完整"
-          
-          # 尝试安装Python相关包（可能在某些环境中不可用）
-          sudo -E apt-get install -y \
-            python3-ply \
-            python3-docutils \
-            python3-pyelftools \
-            python3-distutils 2>/dev/null || echo "⚠️ 某些Python包不可用，将跳过"
-          
-          echo "🛠️ 安装OpenWrt特定工具..."
-          sudo -E apt-get install -y \
-            gawk \
-            asciidoc \
-            binutils \
-            device-tree-compiler \
-            fastjar \
-            help2man \
-            intltool \
-            mkisofs \
-            scons \
-            subversion \
-            xmlto \
-            xsltproc \
-            qemu-utils \
-            squashfs-tools \
-            swig \
-            yasm \
-            p7zip \
-            p7zip-full || echo "⚠️ 某些OpenWrt工具安装失败，但可能不影响编译"
-          
-          # 尝试安装可能不可用的包
-          echo "🔧 尝试安装额外工具..."
-          sudo -E apt-get install -y \
-            antlr3 \
-            ecj \
-            uglifyjs \
-            ninja-build \
-            lrzsz \
-            msmtp 2>/dev/null || echo "⚠️ 某些额外工具不可用，将跳过"
-          
-          # 尝试安装多架构支持（可能在某些环境中不可用）
-          echo "🏗️ 尝试安装多架构支持..."
-          sudo -E apt-get install -y \
-            gcc-multilib \
-            g++-multilib \
-            libc6-dev-i386 2>/dev/null || echo "⚠️ 多架构支持不可用，将跳过"
-          
-          # 安装Node.js（用于某些构建工具）
-          echo "📱 安装Node.js..."
-          if ! command -v node &> /dev/null; then
-            curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - || echo "⚠️ Node.js源添加失败"
-            sudo -E apt-get install -y nodejs || echo "⚠️ Node.js安装失败"
+          mapfile -t REMOVABLE_PACKAGES < <(
+            dpkg-query -W -f='${binary:Package}\n' \
+              azure-cli firefox powershell thunderbird 'libreoffice*' 2>/dev/null || true
+          )
+          if (( ${#REMOVABLE_PACKAGES[@]} > 0 )); then
+            "${APT_GET[@]}" remove --purge -y "${REMOVABLE_PACKAGES[@]}" || \
+              echo "::warning::部分非必要预装软件未能移除，将继续编译"
           fi
-          
-          # 如果uglifyjs不可用，尝试通过npm安装
-          if ! command -v uglifyjs &> /dev/null && command -v npm &> /dev/null; then
-            echo "📦 通过npm安装uglifyjs..."
-            sudo npm install -g uglify-js || echo "⚠️ npm安装uglifyjs失败"
-          fi
+
+          # 使用Ubuntu 24.04中可用的包名，覆盖官方OpenWrt、LEDE、
+          # ImmortalWrt和Lienol常见分支的构建依赖。
+          echo "📦 安装OpenWrt编译依赖..."
+          BUILD_PACKAGES=(
+            ack antlr3 asciidoc autoconf automake autopoint binutils bison
+            build-essential bzip2 ccache clang cmake cpio curl
+            device-tree-compiler ecj fastjar file flex g++-multilib gawk
+            gcc-multilib genisoimage gettext git gperf gzip haveged help2man
+            intltool libc6-dev-i386 libelf-dev libfuse-dev libglib2.0-dev
+            libgmp-dev libgnutls28-dev libltdl-dev libmpc-dev libmpfr-dev
+            libncurses-dev libnsl-dev libpython3-dev libreadline-dev libssl-dev
+            libtool libyaml-dev lld llvm lrzsz msmtp ninja-build p7zip-full
+            patch perl pkgconf python3 python3-dev python3-docutils python3-pip
+            python3-ply python3-pyelftools python3-setuptools python3-wheel
+            qemu-utils re2c rsync scons squashfs-tools subversion swig tar
+            texinfo time uglifyjs unzip upx-ucl wget xmlto xsltproc xxd yasm
+            zlib1g-dev zstd
+          )
+          "${APT_GET[@]}" install -y --no-install-recommends "${BUILD_PACKAGES[@]}"
           
           # 系统清理
           echo "🧹 清理系统..."
-          sudo -E systemctl daemon-reload
-          sudo -E apt-get autoremove --purge -y
-          sudo -E apt-get autoclean
-          sudo -E apt-get clean
+          "${APT_GET[@]}" autoremove --purge -y || true
+          "${APT_GET[@]}" clean
           
           # 创建工作目录
           echo "📁 创建工作目录..."
           sudo mkdir -p /workdir
-          sudo chown $USER:$GROUPS /workdir
+          sudo chown "$USER:$(id -gn)" /workdir
           
           # 设置时区
           echo "🕒 设置时区..."
-          sudo timedatectl set-timezone "$TZ"
+          sudo timedatectl set-timezone "$TZ" || \
+            echo "::warning::无法修改系统时区，将继续使用TZ环境变量"
           
-          # 验证关键工具
+          # 验证关键工具。任一缺失都不能把初始化标记为成功。
           echo "✅ 验证编译环境..."
-          echo "GCC版本: $(gcc --version | head -1)"
-          echo "Make版本: $(make --version | head -1)"
-          echo "Git版本: $(git --version)"
-          echo "Python版本: $(python3 --version)"
-          echo "CMake版本: $(cmake --version | head -1 2>/dev/null || echo '未安装')"
+          REQUIRED_COMMANDS=(
+            bison ccache cmake dtc flex g++ gawk gcc git make msgfmt
+            mksquashfs perl python3 rsync svn swig unzip
+          )
+          MISSING_COMMANDS=()
+          for command_name in "${REQUIRED_COMMANDS[@]}"; do
+            if ! command -v "$command_name" >/dev/null 2>&1; then
+              MISSING_COMMANDS+=("$command_name")
+            fi
+          done
+
+          if (( ${#MISSING_COMMANDS[@]} > 0 )); then
+            echo "::error::缺少关键编译工具: ${MISSING_COMMANDS[*]}"
+            exit 1
+          fi
+
+          gcc --version | sed -n '1p'
+          make --version | sed -n '1p'
+          git --version
+          python3 --version
+          cmake --version | sed -n '1p'
           
           # 显示最终的磁盘空间
           echo "💾 清理后磁盘空间:"
           df -h
           
-          echo "status=success" >> $GITHUB_OUTPUT
-          echo "✅ 编译环境初始化完成, 编译环境初始化完成"
+          echo "status=success" >> "$GITHUB_OUTPUT"
+          echo "✅ 编译环境初始化完成"
       - name: 📦 克隆源码
         id: codes
         working-directory: /workdir
@@ -460,9 +412,9 @@ jobs:
           git clone -q --single-branch --depth=1 \
             --branch "${{ needs.prepare.outputs.repo_branch }}" \
             "${{ needs.prepare.outputs.repo_url }}" openwrt
-          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+          ln -sfn /workdir/openwrt "$GITHUB_WORKSPACE/openwrt"
           
-          echo "status=success" >> $GITHUB_OUTPUT
+          echo "status=success" >> "$GITHUB_OUTPUT"
           echo "✅ 源码克隆完成"
       - name: 🔧 加载自定义feeds
         env:
@@ -572,6 +524,9 @@ jobs:
             echo "::error::共有 $CONFIG_ERRORS 个用户插件未进入最终配置"
             exit 1
           fi
+
+          echo "🔍 检查当前源码分支所需的主机编译依赖..."
+          make prereq
           
           echo "📋 最终配置文件预览："
           grep -m 20 -E "^CONFIG_TARGET|^CONFIG_PACKAGE.*=y" .config
