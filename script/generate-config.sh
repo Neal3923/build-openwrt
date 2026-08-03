@@ -432,17 +432,6 @@ CONFIG_PACKAGE_luci-theme-material=y
 EOF
             ;;
             
-        "luci-app-netdata")
-            cat << 'EOF'
-
-# ======================== Netdata 系统监控 ========================
-CONFIG_PACKAGE_luci-app-netdata=y
-CONFIG_PACKAGE_luci-i18n-netdata-zh-cn=y
-CONFIG_PACKAGE_netdata=y
-
-EOF
-            ;;
-            
         *)
             log_warning "未知插件: $plugin，将添加基础配置"
             cat << EOF
