@@ -2,7 +2,7 @@
 #========================================================================================================================
 # OpenWrt Feeds源管理脚本
 # 功能: 根据选择的插件动态配置feeds源
-# 用法: ./manage-feeds.sh "插件列表"
+# 用法: ./manage-feeds.sh "插件列表" [输出文件] [源码类型] [实际分支]
 #========================================================================================================================
 
 set -euo pipefail
@@ -30,6 +30,25 @@ declare -A PLUGIN_FEEDS_MAP=(
     # smart-build.yml会将它们直接克隆到package/community。
     ["luci-app-pushbot"]="src-git pushbot https://github.com/zzsj0928/luci-app-pushbot"
 )
+
+PASSWALL_FEED_PROFILE="latest"
+
+# OpenWrt 24.10及更早分支的Go工具链无法编译新版Geoview。
+# 对这些分支同时固定PassWall主程序和依赖仓库，避免混用不匹配的版本。
+configure_passwall_feeds() {
+    local source_branch="${1:-}"
+    local repo_branch="${2:-}"
+
+    case "${source_branch}:${repo_branch}" in
+        openwrt-main:openwrt-24.10|openwrt-main:openwrt-23.05|\
+        immortalwrt-master:openwrt-24.10|immortalwrt-master:openwrt-23.05|\
+        Lienol-master:24.10|Lienol-master:23.05|Lienol-master:19.07|\
+        lede-master:20251001|lede-master:20230609|lede-master:20221001)
+            PLUGIN_FEEDS_MAP["luci-app-passwall"]="src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages^19b710c0a393eeeaa5dba4c30c5564d0b8b11f76;src-git passwall https://github.com/Openwrt-Passwall/openwrt-passwall^681609918c03e1751421aeec35e714af616d8146"
+            PASSWALL_FEED_PROFILE="25.3.2-1 / packages@19b710c"
+            ;;
+    esac
+}
 
 # 获取插件需要的feeds
 get_plugin_feeds() {
@@ -99,11 +118,13 @@ generate_feeds_conf() {
 # 显示使用帮助
 show_usage() {
     echo "使用方法:"
-    echo "  $0 <plugins_list> [output_file]"
+    echo "  $0 <plugins_list> [output_file] [source_branch] [repo_branch]"
     echo ""
     echo "参数:"
     echo "  plugins_list  - 逗号分隔的插件列表"
     echo "  output_file   - 源码现有feeds.conf.default路径（默认: feeds.conf.default）"
+    echo "  source_branch - 源码类型（例如 openwrt-main）"
+    echo "  repo_branch   - 实际仓库分支（例如 openwrt-24.10）"
     echo ""
     echo "示例:"
     echo "  $0 'luci-app-ssr-plus,luci-app-dockerman'"
@@ -119,9 +140,16 @@ main() {
     
     local plugins_list="$1"
     local output_file="${2:-feeds.conf.default}"
+    local source_branch="${3:-}"
+    local repo_branch="${4:-}"
+
+    configure_passwall_feeds "$source_branch" "$repo_branch"
     
     echo "📋 插件列表: $plugins_list"
     echo "📄 输出文件: $output_file"
+    if [[ ",$plugins_list," == *",luci-app-passwall,"* ]]; then
+        echo "🔒 PassWall源版本: $PASSWALL_FEED_PROFILE"
+    fi
     echo ""
     
     # 生成feeds配置

@@ -467,7 +467,11 @@ jobs:
 
           # 保留当前源码自带的feeds，只追加所选插件需要的第三方feeds。
           # 这样可避免把OpenWrt、LEDE、ImmortalWrt等不同源码的基础feeds混用。
-          bash script/manage-feeds.sh "$PLUGINS_LIST" openwrt/feeds.conf.default
+          bash script/manage-feeds.sh \
+            "$PLUGINS_LIST" \
+            openwrt/feeds.conf.default \
+            "${{ needs.prepare.outputs.source_branch }}" \
+            "${{ needs.prepare.outputs.repo_branch }}"
 
       - name: 📥 更新feeds
         run: |
@@ -492,6 +496,29 @@ jobs:
             echo "::error::feeds更新连续3次失败"
             exit 1
           fi
+
+          verify_pinned_feed() {
+            local feed_name="$1"
+            local feed_url expected_revision actual_revision
+
+            feed_url=$(awk -v name="$feed_name" \
+              '$1 ~ /^src-git/ && $2 == name { print $3; exit }' \
+              feeds.conf.default)
+            if [[ "$feed_url" != *"^"* ]]; then
+              return
+            fi
+
+            expected_revision="${feed_url##*^}"
+            actual_revision=$(git -C "feeds/$feed_name" rev-parse HEAD)
+            if [ "$actual_revision" != "$expected_revision" ]; then
+              echo "::error::$feed_name 版本校验失败，期望 $expected_revision，实际 $actual_revision"
+              exit 1
+            fi
+            echo "  ✅ $feed_name 已固定到 $actual_revision"
+          }
+
+          verify_pinned_feed passwall_packages
+          verify_pinned_feed passwall
           echo "✅ feeds更新完成"
 
       - name: 🎨 安装 Argon 独立源码包
@@ -613,6 +640,7 @@ jobs:
           KVM_CPU_PACKAGES=()
           RUNTIME_DISABLED_FEEDS=()
           COMPANION_PLUGINS=()
+          REQUIRED_PLUGIN_CONFIGS=()
           BANDIX_SELECTED=false
           for plugin in "${USER_PLUGINS[@]}"; do
             case "$plugin" in
@@ -621,8 +649,9 @@ jobs:
                 ;;
               luci-app-passwall)
                 # PassWall 的简体中文翻译由 LuCI 构建系统生成独立语言包。
-                # 将它作为配套插件强制加入并在 defconfig 后验证，避免只生成英文界面。
-                COMPANION_PLUGINS+=(luci-i18n-passwall-zh-cn)
+                # 同时显式编译 Hysteria，并在 defconfig 后验证配套包和功能开关。
+                COMPANION_PLUGINS+=(hysteria luci-i18n-passwall-zh-cn)
+                REQUIRED_PLUGIN_CONFIGS+=(CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Hysteria=y)
                 # 这两个feed只用于编译PassWall源码，OpenWrt官方软件源并不发布
                 # 对应的运行时APK仓库。设为m会保留编译能力，但在固件中默认注释源。
                 RUNTIME_DISABLED_FEEDS+=(passwall passwall_packages)
@@ -669,6 +698,11 @@ jobs:
             fi
             echo "CONFIG_PACKAGE_$plugin=y" >> .config
             echo "  ✓ 添加插件: $plugin"
+          done
+
+          for config_item in "${REQUIRED_PLUGIN_CONFIGS[@]}"; do
+            echo "$config_item" >> .config
+            echo "  ✓ 添加功能配置: $config_item"
           done
 
           for feed in "${RUNTIME_DISABLED_FEEDS[@]}"; do
@@ -751,6 +785,14 @@ jobs:
               exit 1
             fi
             echo "  ✅ 已启用配套插件: $plugin"
+          done
+
+          for config_item in "${REQUIRED_PLUGIN_CONFIGS[@]}"; do
+            if ! grep -qx "$config_item" .config; then
+              echo "::error::插件功能配置不存在或未成功启用: $config_item"
+              exit 1
+            fi
+            echo "  ✅ 已启用插件功能: $config_item"
           done
 
           # make defconfig会静默丢弃不存在的包，必须验证用户选择确实生效。
