@@ -92,6 +92,22 @@
                         <!-- 设备选项将通过JavaScript动态生成 -->
                     </div>
 
+                    <div class="build-setting-card">
+                        <div class="setting-copy">
+                            <label class="setting-title" for="rootfs-partsize-input">💾 根分区容量</label>
+                            <p class="setting-description">固件内部 EXT4 根分区的容量。选择 Docker、PassWall 等大型插件时建议至少 512 MiB。</p>
+                        </div>
+                        <div class="setting-control">
+                            <div class="setting-input-row">
+                                <input id="rootfs-partsize-input" class="setting-number-input" type="number"
+                                    min="128" max="4096" step="1" value="512"
+                                    aria-describedby="rootfs-partsize-help">
+                                <span class="setting-unit">MiB</span>
+                            </div>
+                            <div id="rootfs-partsize-help" class="setting-help">可填写 128–4096，默认 512；需要更多软件空间可选择 1024 或更大。</div>
+                        </div>
+                    </div>
+
                     <div class="step-actions">
                         <button class="btn btn-secondary prev-step-btn">← 上一步</button>
                         <button class="btn btn-primary next-step-btn">下一步 →</button>
