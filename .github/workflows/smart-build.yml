@@ -449,6 +449,41 @@ jobs:
             exit 1
           fi
           echo "✅ feeds更新完成"
+      - name: 🩹 修复 OpenWrt 25.12 PassWall 下载哈希
+        if: >-
+          needs.prepare.outputs.source_branch == 'openwrt-main' &&
+          needs.prepare.outputs.repo_branch == 'openwrt-25.12' &&
+          contains(needs.prepare.outputs.plugins_list, 'luci-app-passwall')
+        run: |
+          set -euo pipefail
+
+          PACKAGE_MAKEFILE="openwrt/feeds/passwall_packages/shadowsocksr-libev/Makefile"
+          # PassWall main 当前使用旧归档哈希，而 OpenWrt 25.12 对同一固定 Git
+          # 提交的可复现归档会生成另一个哈希。只接受这两个已知值，避免关闭校验。
+          UPSTREAM_HASH="146fa4511a52da2aaa1e11ea0294cfb450e62643156c5da3b10e037ef43961f6"
+          OPENWRT_2512_HASH="42dab453a7d8b3737109110083513467bad1cf71a0aaf671452595797b2b59b0"
+
+          if [ ! -f "$PACKAGE_MAKEFILE" ]; then
+            echo "::error::未找到 PassWall 软件包配置: $PACKAGE_MAKEFILE"
+            exit 1
+          fi
+
+          CURRENT_HASH=$(sed -n 's/^PKG_MIRROR_HASH:=//p' "$PACKAGE_MAKEFILE")
+          if [ "$CURRENT_HASH" = "$OPENWRT_2512_HASH" ]; then
+            echo "✅ PassWall 已包含 OpenWrt 25.12 所需哈希"
+            exit 0
+          fi
+
+          if [ "$CURRENT_HASH" != "$UPSTREAM_HASH" ]; then
+            echo "::error::PassWall 上游哈希已发生未知变化，拒绝自动覆盖: $CURRENT_HASH"
+            exit 1
+          fi
+
+          sed -i \
+            "s/^PKG_MIRROR_HASH:=$UPSTREAM_HASH$/PKG_MIRROR_HASH:=$OPENWRT_2512_HASH/" \
+            "$PACKAGE_MAKEFILE"
+          grep -qxF "PKG_MIRROR_HASH:=$OPENWRT_2512_HASH" "$PACKAGE_MAKEFILE"
+          echo "✅ 已应用 OpenWrt 25.12 的 shadowsocksr-libev 哈希兼容修复"
       - name: 📦 安装feeds
         run: |
           set -euo pipefail
