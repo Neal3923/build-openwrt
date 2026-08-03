@@ -248,6 +248,48 @@ body::before {
   box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.12), 0 0 28px rgba(56, 189, 248, 0.09) !important;
 }
 
+.build-setting-card {
+  color: var(--text-soft);
+  background: linear-gradient(155deg, rgba(13, 27, 48, 0.96), rgba(10, 20, 37, 0.96));
+  border-color: rgba(94, 234, 212, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 14px 36px rgba(0, 0, 0, 0.2);
+}
+
+.setting-title {
+  color: var(--text);
+}
+
+.setting-description,
+.setting-help {
+  color: var(--muted);
+}
+
+.setting-number-input {
+  color: var(--text);
+  background: rgba(5, 12, 25, 0.86);
+  border-color: var(--border);
+  caret-color: var(--cyan);
+}
+
+.setting-number-input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.12), 0 0 28px rgba(56, 189, 248, 0.09);
+}
+
+.setting-number-input.input-error {
+  border-color: #fb7185;
+}
+
+.setting-unit {
+  color: var(--cyan);
+  background: rgba(15, 35, 58, 0.96);
+  border-color: var(--border);
+}
+
+.setting-help.error {
+  color: #fda4af;
+}
+
 .options-grid,
 .plugin-grid {
   align-items: stretch;

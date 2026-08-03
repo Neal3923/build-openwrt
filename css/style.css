@@ -258,6 +258,84 @@ body {
   margin-bottom: 30px;
 }
 
+.build-setting-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+  gap: 28px;
+  align-items: center;
+  margin: 0 0 30px;
+  padding: 22px 24px;
+  border: 2px solid #e0e0e0;
+  border-radius: 15px;
+  background: #fff;
+}
+
+.setting-title {
+  display: block;
+  margin-bottom: 8px;
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.setting-description,
+.setting-help {
+  color: #6c757d;
+  line-height: 1.6;
+}
+
+.setting-description {
+  margin: 0;
+}
+
+.setting-input-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.setting-number-input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  color: #2c3e50;
+  font: inherit;
+  font-weight: 700;
+  border: 2px solid #d8dce3;
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+  outline: none;
+}
+
+.setting-number-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.setting-number-input.input-error {
+  border-color: #e74c3c;
+}
+
+.setting-unit {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  color: #495057;
+  font-weight: 700;
+  border: 2px solid #d8dce3;
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+  background: #f1f3f5;
+}
+
+.setting-help {
+  margin-top: 8px;
+  font-size: 0.88rem;
+}
+
+.setting-help.error {
+  color: #e74c3c;
+}
+
 .options-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -1062,6 +1140,11 @@ body {
 
 /* === 响应式设计 === */
 @media (max-width: 768px) {
+  .build-setting-card {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
   .container {
     padding: 0 15px;
   }

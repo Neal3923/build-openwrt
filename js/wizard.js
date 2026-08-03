@@ -11,6 +11,7 @@ class WizardManager {
             source: '',
             repoBranch: '',
             device: 'x86_64',
+            rootfsPartSize: 512,
             plugins: [],
             customSources: [],
             optimization: 'balanced'
@@ -369,6 +370,8 @@ class WizardManager {
                 if (filterType) {
                     this.filterOptions(e.target.value, filterType);
                 }
+            } else if (e.target.matches('#rootfs-partsize-input')) {
+                this.updateRootfsPartSize(e.target.value);
             }
         });
     }
@@ -735,6 +738,10 @@ class WizardManager {
                         <div class="summary-value">${deviceInfo?.name || '未选择'}</div>
                     </div>
                     <div class="summary-item">
+                        <div class="summary-label">根分区容量</div>
+                        <div class="summary-value">${this.config.rootfsPartSize} MiB</div>
+                    </div>
+                    <div class="summary-item">
                         <div class="summary-label">选中插件</div>
                         <div class="summary-value">${this.config.plugins.length} 个</div>
                     </div>
@@ -793,6 +800,33 @@ class WizardManager {
         console.log('✅ 选择设备:', deviceKey);
     }
 
+    updateRootfsPartSize(rawValue) {
+        const value = Number(rawValue);
+        this.config.rootfsPartSize = Number.isInteger(value) ? value : 0;
+
+        const input = document.getElementById('rootfs-partsize-input');
+        const help = document.getElementById('rootfs-partsize-help');
+        const isValid = this.isRootfsPartSizeValid();
+
+        if (input) {
+            input.classList.toggle('input-error', !isValid);
+            input.setAttribute('aria-invalid', String(!isValid));
+        }
+
+        if (help) {
+            help.classList.toggle('error', !isValid);
+            help.textContent = isValid
+                ? `将生成 ${this.config.rootfsPartSize} MiB 的根分区。`
+                : '请输入 128–4096 之间的整数。';
+        }
+    }
+
+    isRootfsPartSizeValid() {
+        return Number.isInteger(this.config.rootfsPartSize) &&
+            this.config.rootfsPartSize >= 128 &&
+            this.config.rootfsPartSize <= 4096;
+    }
+
     togglePlugin(pluginKey) {
         const index = this.config.plugins.indexOf(pluginKey);
         if (index > -1) {
@@ -831,6 +865,11 @@ class WizardManager {
                 return;
             }
 
+            if (!this.isRootfsPartSizeValid()) {
+                alert('根分区容量必须是 128–4096 之间的整数');
+                return;
+            }
+
             // 验证Token
             const token = this.getValidToken();
             if (!token) {
@@ -866,6 +905,7 @@ class WizardManager {
             this.addLogEntry('info', `📋 源码: ${this.sourceBranches[this.config.source]?.name}`);
             this.addLogEntry('info', `🌿 分支: ${this.config.repoBranch}`);
             this.addLogEntry('info', `🔧 设备: ${this.deviceConfigs[this.config.device]?.name}`);
+            this.addLogEntry('info', `💾 根分区: ${this.config.rootfsPartSize} MiB`);
             this.addLogEntry('info', `📦 插件: ${this.config.plugins.length}个`);
 
             // 触发GitHub Actions编译（仅智能编译工作流）
@@ -894,6 +934,7 @@ class WizardManager {
             source_branch: this.config.source,
             repo_branch: this.config.repoBranch,
             target_device: this.config.device,
+            rootfs_partsize: this.config.rootfsPartSize,
             plugins: this.config.plugins.join(','), // 转换为逗号分隔的字符串
             description: '智能编译工具Web界面触发',
             timestamp: Date.now(),
@@ -933,6 +974,7 @@ class WizardManager {
                         source_branch: buildData.source_branch,
                         repo_branch: buildData.repo_branch,
                         target_device: buildData.target_device,
+                        rootfs_partsize: buildData.rootfs_partsize,
                         plugins: buildData.plugins,
                         description: buildData.description,
                         trigger_method: 'web_interface',
@@ -1286,6 +1328,7 @@ class WizardManager {
             `源码仓库: ${sourceInfo?.name || '未知'}\n` +
             `实际分支/版本: ${this.config.repoBranch || '未知'}\n` +
             `目标设备: ${deviceInfo?.name || '未知'}\n` +
+            `根分区容量: ${this.config.rootfsPartSize} MiB\n` +
             `选中插件: ${this.config.plugins.length}个\n` +
             `工作流类型: 智能编译 (smart-build.yml)\n\n` +
             `⚠️ 注意事项:\n` +
@@ -1594,6 +1637,10 @@ class WizardManager {
             case 2:
                 if (!this.config.device) {
                     alert('请选择目标设备');
+                    return false;
+                }
+                if (!this.isRootfsPartSizeValid()) {
+                    alert('根分区容量必须是 128–4096 之间的整数');
                     return false;
                 }
                 break;

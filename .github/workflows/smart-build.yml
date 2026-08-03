@@ -53,6 +53,12 @@ on:
         type: choice
         options:
           - x86_64
+
+      rootfs_partsize:
+        description: "EXT4根分区容量（MiB，128–4096）"
+        required: true
+        default: "512"
+        type: string
       
       plugins_list:
         description: "插件列表(用逗号分隔)"
@@ -78,6 +84,7 @@ jobs:
     outputs:
       source_branch: ${{ steps.config.outputs.source_branch }}
       target_device: ${{ steps.config.outputs.target_device }}
+      rootfs_partsize: ${{ steps.config.outputs.rootfs_partsize }}
       plugins_list: ${{ steps.config.outputs.plugins_list }}
       build_tag: ${{ steps.config.outputs.build_tag }}
       repo_url: ${{ steps.config.outputs.repo_url }}
@@ -100,10 +107,12 @@ jobs:
           DISPATCH_SOURCE_BRANCH: ${{ github.event.client_payload.source_branch }}
           DISPATCH_REPO_BRANCH: ${{ github.event.client_payload.repo_branch }}
           DISPATCH_TARGET_DEVICE: ${{ github.event.client_payload.target_device }}
+          DISPATCH_ROOTFS_PARTSIZE: ${{ github.event.client_payload.rootfs_partsize }}
           DISPATCH_PLUGINS: ${{ github.event.client_payload.plugins }}
           INPUT_SOURCE_BRANCH: ${{ github.event.inputs.source_branch }}
           INPUT_REPO_BRANCH: ${{ github.event.inputs.repo_branch }}
           INPUT_TARGET_DEVICE: ${{ github.event.inputs.target_device }}
+          INPUT_ROOTFS_PARTSIZE: ${{ github.event.inputs.rootfs_partsize }}
           INPUT_PLUGINS: ${{ github.event.inputs.plugins_list }}
           INPUT_BUILD_DESCRIPTION: ${{ github.event.inputs.build_description }}
         run: |
@@ -113,6 +122,7 @@ jobs:
             SOURCE_BRANCH="$DISPATCH_SOURCE_BRANCH"
             REQUESTED_REPO_BRANCH="$DISPATCH_REPO_BRANCH"
             TARGET_DEVICE="$DISPATCH_TARGET_DEVICE"
+            ROOTFS_PARTSIZE="$DISPATCH_ROOTFS_PARTSIZE"
             PLUGINS_LIST="$DISPATCH_PLUGINS"
             BUILD_DESC="Web界面编译"
           else
@@ -120,6 +130,7 @@ jobs:
             SOURCE_BRANCH="$INPUT_SOURCE_BRANCH"
             REQUESTED_REPO_BRANCH="$INPUT_REPO_BRANCH"
             TARGET_DEVICE="$INPUT_TARGET_DEVICE"
+            ROOTFS_PARTSIZE="$INPUT_ROOTFS_PARTSIZE"
             PLUGINS_LIST="$INPUT_PLUGINS"
             BUILD_DESC="$INPUT_BUILD_DESCRIPTION"
           fi
@@ -128,8 +139,15 @@ jobs:
           SOURCE_BRANCH=${SOURCE_BRANCH:-"lede-master"}
           REQUESTED_REPO_BRANCH=${REQUESTED_REPO_BRANCH:-"auto"}
           TARGET_DEVICE=${TARGET_DEVICE:-"x86_64"}
+          ROOTFS_PARTSIZE=${ROOTFS_PARTSIZE:-"512"}
           PLUGINS_LIST=${PLUGINS_LIST:-""}
           BUILD_DESC=${BUILD_DESC:-"智能编译"}
+
+          if [[ ! "$ROOTFS_PARTSIZE" =~ ^[0-9]+$ ]] ||
+             (( ROOTFS_PARTSIZE < 128 || ROOTFS_PARTSIZE > 4096 )); then
+            echo "::error::根分区容量必须是 128–4096 之间的整数，当前值: $ROOTFS_PARTSIZE"
+            exit 1
+          fi
 
           # 规范化并验证插件名称，避免无效输入污染GITHUB_OUTPUT或Shell命令。
           read -ra REQUESTED_PLUGINS <<< "${PLUGINS_LIST//,/ }"
@@ -147,6 +165,7 @@ jobs:
           echo "  源码仓库: $SOURCE_BRANCH"
           echo "  请求分支: $REQUESTED_REPO_BRANCH"
           echo "  目标设备: $TARGET_DEVICE"
+          echo "  根分区容量: ${ROOTFS_PARTSIZE} MiB"
           echo "  插件列表: $PLUGINS_LIST"
           echo "  编译描述: $BUILD_DESC"
           
@@ -222,6 +241,7 @@ jobs:
           # 输出配置到环境变量
           echo "source_branch=$SOURCE_BRANCH" >> $GITHUB_OUTPUT
           echo "target_device=$TARGET_DEVICE" >> $GITHUB_OUTPUT
+          echo "rootfs_partsize=$ROOTFS_PARTSIZE" >> "$GITHUB_OUTPUT"
           printf 'plugins_list=%s\n' "$PLUGINS_LIST" >> "$GITHUB_OUTPUT"
           echo "build_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
           echo "repo_url=$REPO_URL" >> $GITHUB_OUTPUT
@@ -439,6 +459,7 @@ jobs:
       - name: 🔧 生成最终编译配置
         env:
           PLUGINS_LIST: ${{ needs.prepare.outputs.plugins_list }}
+          ROOTFS_PARTSIZE: ${{ needs.prepare.outputs.rootfs_partsize }}
         run: |
           set -euo pipefail
           echo "🔧 开始生成最终编译配置..."
@@ -452,6 +473,7 @@ jobs:
           CONFIG_TARGET_x86_64_DEVICE_generic=y
           CONFIG_TARGET_x86_64_Generic=y
           EOF
+          echo "CONFIG_TARGET_ROOTFS_PARTSIZE=$ROOTFS_PARTSIZE" >> .config
 
           # 合并用户插件与x86_64基础包并去重，使用数组避免意外的通配符展开。
           RECOMMENDED_PLUGINS=(
@@ -517,6 +539,11 @@ jobs:
 
           if ! grep -Eq '^CONFIG_TARGET_x86_64_(DEVICE_generic|Generic)=y$' .config; then
             echo "::error::x86_64 Generic设备配置未生效"
+            exit 1
+          fi
+
+          if ! grep -qx "CONFIG_TARGET_ROOTFS_PARTSIZE=$ROOTFS_PARTSIZE" .config; then
+            echo "::error::根分区容量配置未生效: ${ROOTFS_PARTSIZE} MiB"
             exit 1
           fi
 
@@ -665,6 +692,7 @@ jobs:
           🔧 编译配置:
           选中插件: ${{ needs.prepare.outputs.plugins_list }}
           设备配置: ${{ needs.prepare.outputs.device_profile }}
+          根分区容量: ${{ needs.prepare.outputs.rootfs_partsize }} MiB
           
           📱 默认信息:
           - 默认IP地址: 192.168.1.1
@@ -757,6 +785,7 @@ jobs:
           echo "  源码: ${{ needs.prepare.outputs.source_branch }}"
           echo "  分支: ${{ needs.prepare.outputs.repo_branch }}"
           echo "  设备: ${{ needs.prepare.outputs.target_device }}"
+          echo "  根分区容量: ${{ needs.prepare.outputs.rootfs_partsize }} MiB"
           echo "  插件: ${{ needs.prepare.outputs.plugins_list }}"
           echo "  时间: $(date '+%Y-%m-%d %H:%M:%S')"
           echo ""
