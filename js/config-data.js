@@ -224,6 +224,22 @@ const PLUGIN_CONFIGS = {
         size: '50M',
         stability: 'stable'
       },
+      'kmod-kvm-intel': {
+        name: 'KVM宿主（Intel）',
+        description: '为PVE/QEMU启用VT-x与Windows虚拟化优化',
+        requires: ['kmod-kvm-x86'],
+        arch_limit: ['x86'],
+        size: '1M',
+        stability: 'stable'
+      },
+      'kmod-kvm-amd': {
+        name: 'KVM宿主（AMD）',
+        description: '为PVE/QEMU启用AMD-V与Windows虚拟化优化',
+        requires: ['kmod-kvm-x86'],
+        arch_limit: ['x86'],
+        size: '1M',
+        stability: 'stable'
+      },
       'luci-app-ttyd': {
         name: 'TTYD终端',
         description: 'Web终端访问',
@@ -284,10 +300,16 @@ const CONFLICT_RULES = {
     ['luci-app-transmission', 'luci-app-qbittorrent']
   ],
 
+  // KVM处理器模块互斥
+  virtualization_mutual_exclusive: [
+    ['kmod-kvm-intel', 'kmod-kvm-amd']
+  ],
+
   // 架构限制
   arch_restrictions: {
     'luci-app-dockerman': ['x86', 'arm64'],
-    'luci-app-kvm': ['x86']
+    'kmod-kvm-intel': ['x86'],
+    'kmod-kvm-amd': ['x86']
   },
 
   // 存储空间限制（单位：MB）

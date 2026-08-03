@@ -798,6 +798,14 @@ class WizardManager {
         if (index > -1) {
             this.config.plugins.splice(index, 1);
         } else {
+            const kvmAlternatives = {
+                'kmod-kvm-intel': 'kmod-kvm-amd',
+                'kmod-kvm-amd': 'kmod-kvm-intel'
+            };
+            const alternative = kvmAlternatives[pluginKey];
+            if (alternative) {
+                this.config.plugins = this.config.plugins.filter(plugin => plugin !== alternative);
+            }
             this.config.plugins.push(pluginKey);
         }
 
@@ -1504,11 +1512,15 @@ class WizardManager {
     }
 
     detectPluginConflicts() {
-        // 简单的冲突检测逻辑
-        const conflicts = [];
         const selectedPlugins = this.config.plugins;
 
-        // 检查常见冲突
+        if (typeof window.detectPluginConflicts === 'function') {
+            return window.detectPluginConflicts(selectedPlugins);
+        }
+
+        // config-data.js不可用时的基础回退检测
+        const conflicts = [];
+
         const proxyPlugins = ['luci-app-ssr-plus', 'luci-app-passwall', 'luci-app-openclash'];
         const selectedProxy = selectedPlugins.filter(plugin => proxyPlugins.includes(plugin));
 
@@ -1517,6 +1529,16 @@ class WizardManager {
                 type: 'mutual_exclusive',
                 plugins: selectedProxy,
                 message: `代理插件冲突：${selectedProxy.join(', ')} 不能同时选择`
+            });
+        }
+
+        const kvmPlugins = ['kmod-kvm-intel', 'kmod-kvm-amd'];
+        const selectedKvmPlugins = selectedPlugins.filter(plugin => kvmPlugins.includes(plugin));
+        if (selectedKvmPlugins.length > 1) {
+            conflicts.push({
+                type: 'mutual_exclusive',
+                plugins: selectedKvmPlugins,
+                message: `KVM处理器模块冲突：${selectedKvmPlugins.join(', ')} 不能同时选择`
             });
         }
 
