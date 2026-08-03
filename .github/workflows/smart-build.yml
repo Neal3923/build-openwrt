@@ -461,6 +461,30 @@ jobs:
           if [ -n "$PLUGINS_LIST" ]; then
             IFS=',' read -ra USER_PLUGINS <<< "$PLUGINS_LIST"
           fi
+
+          # Intel与AMD的KVM处理器模块不能同时选择。选中任一模块时，
+          # 同时显式加入KVM核心包，并为Linux 6.12+启用Hyper-V模拟能力。
+          KVM_CPU_PACKAGES=()
+          for plugin in "${USER_PLUGINS[@]}"; do
+            case "$plugin" in
+              kmod-kvm-intel|kmod-kvm-amd)
+                KVM_CPU_PACKAGES+=("$plugin")
+                ;;
+            esac
+          done
+
+          if (( ${#KVM_CPU_PACKAGES[@]} > 1 )); then
+            echo "::error::kmod-kvm-intel与kmod-kvm-amd不能同时选择"
+            exit 1
+          fi
+
+          if (( ${#KVM_CPU_PACKAGES[@]} == 1 )); then
+            RECOMMENDED_PLUGINS+=(kmod-kvm-x86)
+            KVM_VENDOR="${KVM_CPU_PACKAGES[0]#kmod-kvm-}"
+            echo "🖥️ 配置${KVM_VENDOR} KVM宿主支持..."
+            bash "$GITHUB_WORKSPACE/script/enable-kvm-host.sh" "$KVM_VENDOR" "$PWD"
+          fi
+
           mapfile -t ALL_PLUGINS < <(
             printf '%s\n' "${RECOMMENDED_PLUGINS[@]}" "${USER_PLUGINS[@]}" |
               sed '/^$/d' | sort -u
