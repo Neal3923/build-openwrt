@@ -32,7 +32,6 @@ declare -r NC='\033[0m'
 # 全局变量
 declare -g BUILD_ID=""
 declare -g EXECUTION_MODE="auto"
-declare -g AUTO_FIX_ENABLED=true
 declare -g VERBOSE_MODE=false
 declare -g DRY_RUN_MODE=false
 
@@ -141,25 +140,18 @@ create_default_build_config() {
     "default_source": "lede-master",
     "default_device": "x86_64",
     "default_plugins": [],
-    "auto_fix_enabled": true,
     "parallel_jobs": 0,
     "timeout_minutes": 360
   },
   "modules": {
     "config_generator": {
       "script": "script/generate-config.sh",
-      "enabled": true,
-      "auto_fix": true
+      "enabled": true
     },
     "plugin_manager": {
       "script": "script/plugin-manager.sh",
       "enabled": true,
       "database_init": true
-    },
-    "build_fixer": {
-      "script": "script/fixes/fix-build-issues.sh",
-      "enabled": true,
-      "auto_detect": true
     }
   },
   "error_handling": {
@@ -190,7 +182,6 @@ generate_runtime_config() {
 {
   "build_id": "$build_id",
   "execution_mode": "$EXECUTION_MODE",
-  "auto_fix_enabled": $AUTO_FIX_ENABLED,
   "verbose_mode": $VERBOSE_MODE,
   "dry_run_mode": $DRY_RUN_MODE,
   "started_at": "$current_time",
@@ -323,34 +314,12 @@ pre_build_check() {
         for result in "${check_results[@]}"; do
             log_warning "  - $result"
         done
-        
-        if [ "$AUTO_FIX_ENABLED" = true ]; then
-            log_info "尝试自动修复..."
-            auto_fix_build_issues "$device" "$plugins"
-        else
-            return 1
-        fi
+        return 1
     else
         log_success "构建前检查通过"
     fi
     
     return 0
-}
-
-# 自动修复构建问题
-auto_fix_build_issues() {
-    local device="$1"
-    local plugins="$2"
-    
-    log_info "开始自动修复构建问题..."
-    
-    # 调用插件管理器的依赖修复
-    call_module "plugin_manager" "auto-fix-deps" "-d" "$device" "-l" "$plugins" "--auto-fix"
-    
-    # 调用构建修复器
-    call_module "build_fixer" "$device" "auto"
-    
-    log_success "自动修复完成"
 }
 
 # 核心构建流程
@@ -379,7 +348,6 @@ execute_build_process() {
     config_args+=("--runtime-config" "$RUNTIME_CONFIG_FILE")
     config_args+=("$device")
     config_args+=("$plugins")
-    [ "$AUTO_FIX_ENABLED" = true ] && config_args+=("--auto-fix")
     [ "$VERBOSE_MODE" = true ] && config_args+=("--verbose")
     chmod +x "$PROJECT_ROOT/script/generate-config.sh"
     if ! "$PROJECT_ROOT/script/generate-config.sh" "${config_args[@]}"; then
@@ -402,22 +370,7 @@ execute_build_process() {
         return 1
     fi
 
-    # 步骤5: 执行自动修复（如有需要）
-    if [ "$AUTO_FIX_ENABLED" = true ]; then
-        log_info "执行编译错误自动修复..."
-        if [ -f "$PROJECT_ROOT/script/fixes/fix-build-issues.sh" ]; then
-            chmod +x "$PROJECT_ROOT/script/fixes/fix-build-issues.sh"
-            if ! "$PROJECT_ROOT/script/fixes/fix-build-issues.sh" "$device" "auto"; then
-                log_warning "自动修复脚本执行遇到问题，但继续流程"
-            else
-                log_success "自动修复完成"
-            fi
-        else
-            log_warning "未找到自动修复脚本: $PROJECT_ROOT/script/fixes/fix-build-issues.sh"
-        fi
-    fi
-
-    # 步骤6: 最终验证
+    # 步骤5: 最终验证
     if [ -f ".config" ] && [ -f "feeds.conf.default" ]; then
         log_success "构建配置已生成: .config, feeds.conf.default"
         show_build_summary "$device" "$plugins" "$source_branch"
@@ -441,7 +394,6 @@ show_build_summary() {
     echo "目标设备: $device"
     echo "源码分支: $source_branch"
     echo "插件列表: ${plugins:-无}"
-    echo "自动修复: $([ "$AUTO_FIX_ENABLED" = true ] && echo "启用" || echo "禁用")"
     echo "执行模式: $EXECUTION_MODE"
     
     if [ -f ".config" ]; then
@@ -469,15 +421,12 @@ ${CYAN}构建模式:${NC}
   generate              生成配置文件
   check                 执行构建前检查
   build                 完整构建流程
-  fix                   仅执行问题修复
   validate              验证现有配置
 
 ${CYAN}通用选项:${NC}
   -d, --device         目标设备类型
   -p, --plugins        插件列表 (逗号分隔)
   -s, --source         源码分支
-  --auto-fix           启用自动修复 (默认启用)
-  --no-auto-fix        禁用自动修复
   --dry-run            仅显示操作，不实际执行
   -v, --verbose        详细输出
   -c, --config         指定配置文件
@@ -494,22 +443,17 @@ ${CYAN}示例:${NC}
   $0 generate -d x86_64 -p "luci-app-ssr-plus,luci-theme-argon"
   
   # 完整构建流程
-  $0 build -d rpi_4b -s lede-master --auto-fix
+  $0 build -d x86_64 -s lede-master
   
   # 仅检查
   $0 check -d x86_64 -p "luci-app-passwall" --dry-run
   
-  # 配置管理
-  $0 config set .build.auto_fix_enabled false
-
 ${CYAN}支持的设备:${NC}
-  x86_64, xiaomi_4a_gigabit, newifi_d2, rpi_4b, nanopi_r2s
+  x86_64
 
 ${CYAN}架构特点:${NC}
   ✅ 模块化设计 - 各模块独立，接口标准化
   ✅ 统一配置 - JSON配置驱动，易于维护
-  ✅ 自动修复 - 智能检测和修复构建问题
-  ✅ 向后兼容 - 保持现有脚本接口不变
 EOF
 }
 
@@ -569,7 +513,7 @@ main() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             # 构建模式
-            generate|check|build|fix|validate)
+            generate|check|build|validate)
                 mode="$1"
                 shift
                 ;;
@@ -595,14 +539,6 @@ main() {
                 config_file="$2"
                 BUILD_CONFIG_FILE="$config_file"
                 shift 2
-                ;;
-            --auto-fix)
-                AUTO_FIX_ENABLED=true
-                shift
-                ;;
-            --no-auto-fix)
-                AUTO_FIX_ENABLED=false
-                shift
                 ;;
             --dry-run)
                 DRY_RUN_MODE=true
@@ -641,6 +577,11 @@ main() {
     device="${device:-$(get_config_value '.build.default_device' 'x86_64')}"
     source_branch="${source_branch:-$(get_config_value '.build.default_source' 'lede-master')}"
     plugins="${plugins:-$(get_config_value '.build.default_plugins | join(",")' '')}"
+
+    if [ "$device" != "x86_64" ]; then
+        log_error "不支持的设备类型: $device（仅支持 x86_64）"
+        exit 1
+    fi
     
     # 执行对应模式
     case "$mode" in
@@ -655,10 +596,6 @@ main() {
         "build")
             log_info "模式: 完整构建流程"
             execute_build_process "$device" "$plugins" "$source_branch"
-            ;;
-        "fix")
-            log_info "模式: 问题修复"
-            auto_fix_build_issues "$device" "$plugins"
             ;;
         "validate")
             log_info "模式: 配置验证"

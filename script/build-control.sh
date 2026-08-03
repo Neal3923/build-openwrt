@@ -60,7 +60,7 @@ ${CYAN}编译模式:${NC}
 
 ${CYAN}选项:${NC}
   -s, --source        源码分支 (lede-master|openwrt-main|immortalwrt-master|Lienol-master)
-  -d, --device        目标设备 (x86_64|xiaomi_4a_gigabit|newifi_d2|rpi_4b|nanopi_r2s)
+  -d, --device        目标设备（仅支持 x86_64）
   -p, --plugins       插件列表 (用逗号分隔)
   -c, --config        配置文件路径
   -t, --token         GitHub Token
@@ -74,7 +74,7 @@ ${CYAN}示例:${NC}
   $0 smart -s lede-master -d x86_64 -p "luci-app-ssr-plus,luci-app-passwall"
   
   # 自动选择编译模式
-  $0 auto -s openwrt-main -d xiaomi_4a_gigabit
+  $0 auto -s openwrt-main -d x86_64
   
   # 仅预览配置，不实际编译
   $0 smart --dry-run -s lede-master -d x86_64
@@ -144,7 +144,7 @@ validate_parameters() {
     
     # 验证目标设备
     case "$target_device" in
-        "x86_64"|"xiaomi_4a_gigabit"|"newifi_d2"|"rpi_4b"|"nanopi_r2s")
+        "x86_64")
             log_debug "目标设备验证通过: $target_device"
             ;;
         "")
@@ -153,7 +153,7 @@ validate_parameters() {
             ;;
         *)
             log_error "不支持的目标设备: $target_device"
-            log_error "支持的设备: x86_64, xiaomi_4a_gigabit, newifi_d2, rpi_4b, nanopi_r2s"
+            log_error "支持的设备: x86_64"
             exit 1
             ;;
     esac

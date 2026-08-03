@@ -142,64 +142,7 @@ const SOURCE_BRANCHES = {
 
 // ===== 设备配置 =====
 const DEVICE_CONFIGS = {
-  // 路由器设备
-  'xiaomi_4a_gigabit': {
-    name: '小米路由器4A千兆版',
-    category: 'router',
-    arch: 'ramips',
-    target: 'ramips/mt7621',
-    profile: 'xiaomi_mi-router-4a-gigabit',
-    flash_size: '16M',
-    ram_size: '128M',
-    recommended: true,
-    features: ['wifi', 'gigabit', 'usb']
-  },
-  'newifi_d2': {
-    name: '新路由3 (Newifi D2)',
-    category: 'router',
-    arch: 'ramips',
-    target: 'ramips/mt7621',
-    profile: 'newifi-d2',
-    flash_size: '32M',
-    ram_size: '512M',
-    recommended: true,
-    features: ['wifi', 'gigabit', 'usb']
-  },
-  'phicomm_k2p': {
-    name: '斐讯K2P',
-    category: 'router',
-    arch: 'ramips',
-    target: 'ramips/mt7621',
-    profile: 'phicomm_k2p',
-    flash_size: '16M',
-    ram_size: '128M',
-    recommended: false,
-    features: ['wifi', 'gigabit']
-  },
-  // ARM设备
-  'rpi_4b': {
-    name: '树莓派4B',
-    category: 'arm',
-    arch: 'bcm27xx',
-    target: 'bcm27xx/bcm2711',
-    profile: 'rpi-4',
-    flash_size: 'SD',
-    ram_size: '1G-8G',
-    recommended: true,
-    features: ['wifi', 'bluetooth', 'gpio', 'usb3']
-  },
-  'nanopi_r2s': {
-    name: 'NanoPi R2S',
-    category: 'arm',
-    arch: 'rockchip',
-    target: 'rockchip/armv8',
-    profile: 'friendlyarm_nanopi-r2s',
-    flash_size: 'SD',
-    ram_size: '1G',
-    recommended: true,
-    features: ['gigabit', 'dual_ethernet']
-  },
-  // X86设备
+  // 本项目仅支持X86_64设备
   'x86_64': {
     name: 'X86 64位 (通用)',
     category: 'x86',
@@ -210,17 +153,6 @@ const DEVICE_CONFIGS = {
     ram_size: '可变',
     recommended: true,
     features: ['efi', 'legacy', 'kvm', 'docker']
-  },
-  'x86_legacy': {
-    name: 'X86 32位 (兼容)',
-    category: 'x86',
-    arch: 'x86',
-    target: 'x86/legacy',
-    profile: 'generic',
-    flash_size: '可变',
-    ram_size: '可变',
-    recommended: false,
-    features: ['legacy']
   }
 };
 

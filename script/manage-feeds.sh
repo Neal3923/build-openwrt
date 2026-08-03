@@ -5,6 +5,8 @@
 # 用法: ./manage-feeds.sh "插件列表"
 #========================================================================================================================
 
+set -euo pipefail
+
 # 插件与feeds源的映射关系
 declare -A PLUGIN_FEEDS_MAP=(
     # SSR Plus+
@@ -22,32 +24,10 @@ declare -A PLUGIN_FEEDS_MAP=(
     ["luci-app-pushbot"]="src-git pushbot https://github.com/zzsj0928/luci-app-pushbot"
 )
 
-# 输出文件不存在时使用的后备基础feeds配置。
-# 工作流会传入源码自带的feeds.conf.default，因此不会用这些内容覆盖源码feeds。
-BASE_FEEDS=$(cat << 'EOF'
-src-git packages https://github.com/coolsnowwolf/packages
-src-git luci https://github.com/coolsnowwolf/luci
-src-git routing https://github.com/coolsnowwolf/routing
-src-git telephony https://github.com/openwrt/telephony.git
-EOF
-)
-
-# 解析插件列表
-parse_plugins() {
-    local plugins_str="$1"
-    local -a plugins=()
-    
-    if [ -n "$plugins_str" ]; then
-        IFS=',' read -ra plugins <<< "$plugins_str"
-    fi
-    
-    echo "${plugins[@]}"
-}
-
 # 获取插件需要的feeds
 get_plugin_feeds() {
     local plugin="$1"
-    local feeds="${PLUGIN_FEEDS_MAP[$plugin]}"
+    local feeds="${PLUGIN_FEEDS_MAP[$plugin]-}"
     
     if [ -n "$feeds" ]; then
         # 分号分隔多个feeds
@@ -67,12 +47,12 @@ generate_feeds_conf() {
     temp_file=$(mktemp)
     trap 'rm -f "$temp_file"' RETURN
 
-    # 优先保留当前源码已有的feeds，避免不同OpenWrt分支之间混用基础feeds。
-    if [ -f "$output_file" ]; then
-        cp "$output_file" "$temp_file"
-    else
-        printf '%s\n' "$BASE_FEEDS" > "$temp_file"
+    # 必须从当前源码自带的feeds开始，绝不猜测或混用其他分支的基础feeds。
+    if [ ! -s "$output_file" ]; then
+        echo "❌ 源码feeds配置不存在或为空: $output_file" >&2
+        return 1
     fi
+    cp "$output_file" "$temp_file"
 
     # 按feed名称去重，防止重复追加同一个第三方源。
     declare -A feed_names
@@ -82,8 +62,11 @@ generate_feeds_conf() {
         fi
     done < "$temp_file"
     
-    # 解析插件列表
-    local plugins=($(parse_plugins "$plugins_str"))
+    # 解析插件列表，避免插件名被Shell通配符意外展开。
+    local -a plugins=()
+    if [ -n "$plugins_str" ]; then
+        IFS=',' read -ra plugins <<< "$plugins_str"
+    fi
     
     # 添加插件对应的feeds
     for plugin in "${plugins[@]}"; do
@@ -113,7 +96,7 @@ show_usage() {
     echo ""
     echo "参数:"
     echo "  plugins_list  - 逗号分隔的插件列表"
-    echo "  output_file   - 输出文件路径（默认: feeds.conf.default）"
+    echo "  output_file   - 源码现有feeds.conf.default路径（默认: feeds.conf.default）"
     echo ""
     echo "示例:"
     echo "  $0 'luci-app-ssr-plus,luci-app-dockerman'"

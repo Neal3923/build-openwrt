@@ -134,7 +134,9 @@ create_default_config() {
     cat > "$config_file" << 'EOF'
 CONFIG_TARGET_x86=y
 CONFIG_TARGET_x86_64=y
+# 新版源码使用DEVICE_generic；Lienol 19.07仍使用旧Profile符号Generic。
 CONFIG_TARGET_x86_64_DEVICE_generic=y
+CONFIG_TARGET_x86_64_Generic=y
 
 # 根文件系统配置
 CONFIG_TARGET_ROOTFS_EXT4FS=y

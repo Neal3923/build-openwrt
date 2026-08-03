@@ -141,22 +141,12 @@ https://your-username.github.io/your-repo-name
 
 ### 支持的设备类型
 
-#### 🏠 家用路由器
-- **小米路由器4A千兆版** - 入门级，16MB存储
-- **新路由3 (Newifi D2)** - 性价比高，32MB存储
-- **斐讯K2P** - 经典设备，16MB存储
-- **华硕AC68U** - 高端路由，128MB存储
-- **网件R7800** - 高性能，512MB存储
-
-#### 💻 ARM 开发板
-- **树莓派4B** - 开发学习，4GB内存
-- **NanoPi R2S** - 软路由专用，1GB内存
-- **Orange Pi Zero** - 轻量级应用
-
 #### 🖥️ X86 平台
 - **X86_64 软路由** - 高性能，支持虚拟化
 - **虚拟机 (VMware/VirtualBox)** - 测试环境
 - **工控机/迷你主机** - 企业级应用
+
+当前仅支持 **X86_64** 目标，不再提供 ARM、MIPS 路由器及 X86 32位目标。
 
 ### 功能插件说明
 
@@ -212,11 +202,7 @@ https://your-username.github.io/your-repo-name
    ⚠️  32MB 设备建议选择 ≤ 20 个常用插件
    ```
 
-4. **架构兼容性** - 检查插件是否支持目标设备
-   ```
-   ❌ 某些 x86 专用插件不支持 ARM 设备
-   ❌ 部分 ARM 优化插件不支持 MIPS 架构
-   ```
+4. **架构兼容性** - 当前构建固定为 X86_64，插件必须支持该架构
 
 ## 📊 编译监控与日志
 
@@ -276,14 +262,6 @@ CONFIG_TARGET_IMAGES_GZIP=y          # 启用压缩镜像
 CONFIG_GRUB_IMAGES=y                 # 启用 GRUB 引导
 CONFIG_VDI_IMAGES=y                  # 生成 VDI 镜像
 CONFIG_VMDK_IMAGES=y                 # 生成 VMDK 镜像
-
-# ARM 设备配置  
-CONFIG_ARM64_USE_LSE_ATOMICS=y       # 启用 ARM64 原子操作
-CONFIG_KERNEL_ARM_PMU=y              # 启用性能监控单元
-
-# 路由器配置
-CONFIG_PACKAGE_wpad-openssl=y        # WiFi 加密支持
-CONFIG_PACKAGE_hostapd-utils=y       # WiFi 管理工具
 ```
 
 ## 🚨 故障排除
@@ -343,14 +321,7 @@ CONFIG_PACKAGE_hostapd-utils=y       # WiFi 管理工具
 4. **测试验证** - 建议先在虚拟机中测试
 5. **稳定电源** - 刷机过程中保持电源稳定
 
-```bash
-# 常用刷机命令（以小米4A为例）
-# 进入刷机模式
-mtd write /tmp/firmware.bin firmware
-
-# 重启设备
-reboot
-```
+X86 固件通常作为磁盘镜像写入物理磁盘，或直接挂载到 VMware、VirtualBox、PVE 等虚拟机。写盘前务必核对目标磁盘，避免覆盖数据。
 
 ## 📁 项目结构
 
@@ -402,38 +373,6 @@ openwrt-smart-builder/
 5. **发起 PR** - 向主项目提交 Pull Request
 6. **代码审查** - 等待维护者审查和反馈
 7. **合并代码** - 审查通过后合并到主分支
-
-### 添加新设备支持
-
-1. **设备信息收集**
-   ```javascript
-   // 在 js/config-data.js 中添加设备信息
-   'your_device_id': {
-     name: '设备名称',
-     category: 'router',           // 设备类别
-     arch: 'ramips',              // 架构类型
-     target: 'ramips/mt7621',     // 编译目标
-     profile: 'device_profile',   // 设备配置文件
-     flash_size: '16M',           // 存储大小
-     ram_size: '128M',            // 内存大小
-     recommended: true,           // 是否推荐
-     features: ['wifi', 'gigabit'] // 设备特性
-   }
-   ```
-
-2. **编译配置映射**
-   ```yaml
-   # 在 .github/workflows/smart-build.yml 中添加
-   elif [ "$TARGET_DEVICE" = "your_device_id" ]; then
-     DEVICE_NAME="设备名称"
-     CONFIG_TARGET="ramips/mt7621"
-     DEVICE_PROFILE="device_profile"
-   ```
-
-3. **测试验证**
-   - 验证设备信息正确性
-   - 测试编译流程完整性
-   - 确认固件能正常刷入
 
 ### 添加新插件支持
 
@@ -526,8 +465,8 @@ A: 首先检查插件冲突，然后减少插件数量，最后查看详细的�
 **Q: 固件太大无法刷入设备？**
 A: 启用体积优化选项，减少不必要的插件，或选择存储更大的设备型号。
 
-**Q: 支持哪些路由器设备？**
-A: 目前支持小米、华硕、网件等主流品牌的热门型号，以及树莓派、NanoPi 等开发板。
+**Q: 支持哪些设备？**
+A: 当前仅支持 X86_64 软路由、工控机和虚拟机。
 
 **Q: GitHub Actions 配额用完了？**
 A: 免费账户每月有 2000 分钟，建议合理安排编译频率，或考虑升级到付费账户。

@@ -1,6 +1,6 @@
 #!/bin/bash
 #========================================================================================================================
-# OpenWrt 配置生成脚本 (修复版本)
+# OpenWrt 配置生成脚本 (兼容版本)
 # 功能: 根据设备和插件需求自动生成完整的.config文件
 # 修复: 添加 --runtime-config 参数支持，与 build-orchestrator.sh 兼容
 # 用法: ./generate-config.sh [设备] [插件列表] [选项...]
@@ -54,7 +54,7 @@ show_header() {
     echo -e "${CYAN}"
     echo "========================================================================================================================="
     echo "                                    📝 OpenWrt 配置生成脚本 v${SCRIPT_VERSION} (兼容版)"
-    echo "                                        智能配置生成 | 自动修复功能"
+    echo "                                        智能配置生成"
     echo "========================================================================================================================="
     echo -e "${NC}"
 }
@@ -67,13 +67,8 @@ ${CYAN}使用方法:${NC}
 
 ${CYAN}支持的设备:${NC}
   x86_64              x86_64架构设备
-  xiaomi_4a_gigabit   小米4A千兆版
-  newifi_d2           新路由D2
-  rpi_4b              树莓派4B
-  nanopi_r2s          NanoPi R2S
 
 ${CYAN}选项:${NC}
-  --auto-fix          启用自动修复功能
   --no-validate       跳过配置验证
   --dry-run           仅显示配置，不写入文件
   --verbose           详细输出模式
@@ -85,14 +80,12 @@ ${CYAN}示例:${NC}
   # 基础使用
   $0 x86_64                                        # 生成x86_64基础配置
   $0 x86_64 "luci-app-ssr-plus"                   # 生成x86_64配置+SSR插件
-  $0 rpi_4b "luci-app-samba4,luci-theme-argon"    # 树莓派配置+多插件
   
   # 高级选项
-  $0 x86_64 "luci-app-ssr-plus" --auto-fix        # 启用自动修复
   $0 x86_64 "luci-app-ssr-plus" --dry-run         # 预览配置
   
   # 与编排器配合使用
-  $0 --runtime-config /tmp/runtime.json x86_64 "luci-app-ssr-plus" --auto-fix
+  $0 --runtime-config /tmp/runtime.json x86_64 "luci-app-ssr-plus"
 
 ${CYAN}支持的插件:${NC}
   luci-app-ssr-plus   SSR Plus+ 科学上网
@@ -138,7 +131,9 @@ get_device_config() {
 # ======================== X86_64 设备配置 ========================
 CONFIG_TARGET_x86=y
 CONFIG_TARGET_x86_64=y
+# 新版源码使用DEVICE_generic；Lienol 19.07仍使用旧Profile符号Generic。
 CONFIG_TARGET_x86_64_DEVICE_generic=y
+CONFIG_TARGET_x86_64_Generic=y
 
 # 引导配置
 CONFIG_GRUB_IMAGES=y
@@ -166,96 +161,9 @@ CONFIG_GRUB_EFI_IMAGES=y
 
 EOF
             ;;
-            
-        "xiaomi_4a_gigabit")
-            cat << 'EOF'
-
-# ======================== 小米4A千兆版 设备配置 ========================
-CONFIG_TARGET_ramips=y
-CONFIG_TARGET_ramips_mt7621=y
-CONFIG_TARGET_ramips_mt7621_DEVICE_xiaomi_mi-router-4a-gigabit=y
-
-# 图像压缩
-CONFIG_TARGET_IMAGES_GZIP=y
-
-# MT7621无线驱动
-CONFIG_PACKAGE_kmod-mt7603=y
-CONFIG_PACKAGE_kmod-mt76x2=y
-CONFIG_PACKAGE_wpad-basic-wolfssl=y
-
-EOF
-            ;;
-            
-        "newifi_d2")
-            cat << 'EOF'
-
-# ======================== 新路由D2 设备配置 ========================
-CONFIG_TARGET_ramips=y
-CONFIG_TARGET_ramips_mt7621=y
-CONFIG_TARGET_ramips_mt7621_DEVICE_d-team_newifi-d2=y
-
-# 图像压缩
-CONFIG_TARGET_IMAGES_GZIP=y
-
-# MT7621无线和USB驱动
-CONFIG_PACKAGE_kmod-mt7603=y
-CONFIG_PACKAGE_kmod-mt76x2=y
-CONFIG_PACKAGE_kmod-usb3=y
-CONFIG_PACKAGE_wpad-basic-wolfssl=y
-
-EOF
-            ;;
-            
-        "rpi_4b")
-            cat << 'EOF'
-
-# ======================== 树莓派4B 设备配置 ========================
-CONFIG_TARGET_bcm27xx=y
-CONFIG_TARGET_bcm27xx_bcm2711=y
-CONFIG_TARGET_bcm27xx_bcm2711_DEVICE_rpi-4=y
-
-# 分区大小
-CONFIG_TARGET_KERNEL_PARTSIZE=64
-CONFIG_TARGET_ROOTFS_PARTSIZE=2048
-CONFIG_TARGET_IMAGES_GZIP=y
-
-# 树莓派特定驱动
-CONFIG_PACKAGE_kmod-usb-net-asix=y
-CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
-CONFIG_PACKAGE_bcm27xx-gpu-fw=y
-CONFIG_PACKAGE_bcm27xx-userland=y
-
-EOF
-            ;;
-            
-        "nanopi_r2s")
-            cat << 'EOF'
-
-# ======================== NanoPi R2S 设备配置 ========================
-CONFIG_TARGET_rockchip=y
-CONFIG_TARGET_rockchip_armv8=y
-CONFIG_TARGET_rockchip_armv8_DEVICE_friendlyarm_nanopi-r2s=y
-
-# 分区大小
-CONFIG_TARGET_KERNEL_PARTSIZE=32
-CONFIG_TARGET_ROOTFS_PARTSIZE=1024
-CONFIG_TARGET_IMAGES_GZIP=y
-
-# R2S特定驱动
-CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
-
-EOF
-            ;;
-            
         *)
-            log_warning "未知设备类型: $device，使用通用配置"
-            cat << 'EOF'
-
-# ======================== 通用设备配置 ========================
-# 请根据实际设备修改目标配置
-CONFIG_TARGET_IMAGES_GZIP=y
-
-EOF
+            log_error "不支持的设备类型: $device（仅支持 x86_64）"
+            return 1
             ;;
     esac
 }
@@ -547,39 +455,6 @@ EOF
     esac
 }
 
-# 应用自动修复
-apply_auto_fixes() {
-    local device="$1"
-    local auto_fix="$2"
-    
-    if [ "$auto_fix" != true ]; then
-        log_debug "自动修复功能未启用"
-        return 0
-    fi
-    
-    log_info "开始应用自动修复..."
-    
-    # 确保修复脚本存在且可执行
-    local main_fix_script="$SCRIPT_DIR/fixes/fix-build-issues.sh"
-    
-    if [ ! -f "$main_fix_script" ]; then
-        log_warning "主修复脚本不存在: $main_fix_script"
-        return 1
-    fi
-    
-    chmod +x "$main_fix_script"
-    
-    # 执行自动修复
-    log_info "执行设备特定修复: $device"
-    if "$main_fix_script" "$device" "auto"; then
-        log_success "自动修复完成"
-        return 0
-    else
-        log_warning "自动修复执行时遇到问题，但继续处理"
-        return 0
-    fi
-}
-
 # 验证配置内容
 validate_config_content() {
     local config_content="$1"
@@ -608,11 +483,6 @@ validate_config_content() {
                 issues+=("X86_64配置不正确")
             fi
             ;;
-        "rpi_4b")
-            if ! echo "$config_content" | grep -q "CONFIG_TARGET_bcm27xx=y"; then
-                issues+=("树莓派配置不正确")
-            fi
-            ;;
     esac
     
     if [ ${#issues[@]} -gt 0 ]; then
@@ -631,7 +501,6 @@ validate_config_content() {
 generate_full_config() {
     local device="$1"
     local plugins="$2"
-    local auto_fix="$3"
     
     log_info "生成完整配置 - 设备: $device"
     
@@ -643,7 +512,6 @@ generate_full_config() {
 # 生成工具: generate-config.sh v${SCRIPT_VERSION}
 # 目标设备: $device
 # 选择插件: ${plugins:-无}
-# 自动修复: $auto_fix
 # ========================================================================================================================"$'\n'
     
     # 设备配置
@@ -677,8 +545,7 @@ generate_full_config() {
 # 注意事项:
 # 1. 首次编译前请执行: make menuconfig 检查配置
 # 2. 建议使用: make -j\$(nproc) V=s 进行编译
-# 3. 如遇到问题，可使用 --auto-fix 选项重新生成
-# 4. 更多信息请参考: https://openwrt.org/
+# 3. 更多信息请参考: https://openwrt.org/
 # ========================================================================================================================"
     
     echo "$config_content"
@@ -702,11 +569,6 @@ detect_potential_issues() {
         warnings+=("SSR Plus+ 和 OpenClash 可能存在冲突")
     fi
     
-    # 检查设备兼容性
-    if [[ "$device" == "xiaomi_4a_gigabit" ]] && [[ "$plugins" == *"openclash"* ]]; then
-        warnings+=("小米4A千兆版存储空间有限，OpenClash可能无法正常运行")
-    fi
-    
     # 显示警告
     if [ ${#warnings[@]} -gt 0 ]; then
         log_warning "检测到潜在问题:"
@@ -722,7 +584,6 @@ main() {
     local device=""
     local plugins=""
     local output_file=".config"
-    local auto_fix=false
     local validate=true
     local dry_run=false
     local verbose=false
@@ -731,10 +592,6 @@ main() {
     # 解析命令行参数（添加了 --runtime-config 处理）
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --auto-fix)
-                auto_fix=true
-                shift
-                ;;
             --no-validate)
                 validate=false
                 shift
@@ -792,13 +649,6 @@ main() {
                 verbose=true
             fi
         fi
-        
-        if [ "$auto_fix" = false ]; then
-            local runtime_auto_fix=$(get_runtime_config_value '.auto_fix_enabled' 'false')
-            if [ "$runtime_auto_fix" = "true" ]; then
-                auto_fix=true
-            fi
-        fi
     fi
     
     # 检查必需参数
@@ -807,13 +657,16 @@ main() {
         echo "使用 --help 查看帮助信息"
         exit 1
     fi
+
+    if [ "$device" != "x86_64" ]; then
+        log_error "不支持的设备类型: $device（仅支持 x86_64）"
+        exit 1
+    fi
     
     # 检查环境
     if ! check_environment; then
-        if [ "$auto_fix" != true ]; then
-            log_error "环境检查失败，请使用 --auto-fix 选项或手动修复"
-            exit 1
-        fi
+        log_error "环境检查失败，请手动修复后重试"
+        exit 1
     fi
     
     # 详细输出模式
@@ -822,7 +675,6 @@ main() {
         log_info "  设备: $device"
         log_info "  插件: ${plugins:-无}"
         log_info "  输出: $output_file"
-        log_info "  自动修复: $auto_fix"
         log_info "  验证: $validate"
         log_info "  预览模式: $dry_run"
         log_info "  运行时配置: ${RUNTIME_CONFIG_FILE:-无}"
@@ -832,25 +684,15 @@ main() {
         detect_potential_issues "$device" "$plugins"
     fi
     
-    # 应用自动修复（在生成配置之前）
-    if [ "$auto_fix" = true ]; then
-        apply_auto_fixes "$device" "$auto_fix"
-    fi
-    
     # 生成配置
     log_info "开始生成配置文件..."
-    local config_content=$(generate_full_config "$device" "$plugins" "$auto_fix")
+    local config_content=$(generate_full_config "$device" "$plugins")
     
     # 验证配置
     if [ "$validate" = true ]; then
         if ! validate_config_content "$config_content"; then
-            if [ "$auto_fix" = true ]; then
-                log_info "尝试自动修复配置问题..."
-                # 可以在这里添加配置修复逻辑
-            else
-                log_error "配置验证失败，请使用 --auto-fix 选项或手动修复"
-                exit 1
-            fi
+            log_error "配置验证失败，请手动修复后重试"
+            exit 1
         fi
     fi
     
