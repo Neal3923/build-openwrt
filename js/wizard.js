@@ -1012,17 +1012,9 @@ class WizardManager {
                     // 只触发智能编译工作流的特定事件类型
                     event_type: 'web_build',
                     client_payload: {
-                        source_branch: buildData.source_branch,
-                        repo_branch: buildData.repo_branch,
-                        target_device: buildData.target_device,
-                        rootfs_partsize: buildData.rootfs_partsize,
-                        plugins: buildData.plugins,
-                        description: buildData.description,
-                        build_id: buildData.build_id,
-                        trigger_method: 'web_interface',
-                        workflow_preference: 'smart_build_only', // 明确指定只使用智能编译
-                        disable_universal_build: true, // 禁用通用编译工作流
-                        timestamp: new Date(buildData.timestamp).toISOString()
+                        // GitHub限制client_payload最多10个顶层字段。将完整配置封装为
+                        // 一个对象，插件列表只受载荷总大小限制，不受顶层字段数量影响。
+                        config: buildData
                     }
                 })
             });
