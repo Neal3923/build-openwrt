@@ -280,12 +280,10 @@
                 <div class="step-content">
                     <strong>支持的设备类型：</strong>
                     <ul>
-                        <li><strong>路由器：</strong>小米4A千兆版、新路由3、斐讯K2P等</li>
-                        <li><strong>ARM设备：</strong>树莓派4B、NanoPi R2S等</li>
-                        <li><strong>X86设备：</strong>虚拟机、软路由、工控机</li>
+                        <li><strong>X86_64设备：</strong>虚拟机、软路由、工控机</li>
                     </ul>
                     <br>
-                    系统会根据设备自动应用相应的优化配置。
+                    当前仅支持 X86_64 目标。
                 </div>
             </div>
 
@@ -398,7 +396,7 @@ Q: 固件太大无法刷入？
 A: 减少插件选择或启用体积优化选项  
 
 Q: 支持哪些设备？
-A: 支持主流路由器、ARM开发板、X86软路由等
+A: 仅支持X86_64软路由、工控机和虚拟机
 
 Q: 编译需要多长时间？
 A: 根据配置复杂度，通常需要1-3小时
@@ -413,11 +411,6 @@ A: 编译完成后在GitHub Releases页面下载
             const examples = `
 💡 配置示例：
 
-🏠 家用路由器推荐配置：
-- 源码：Lean's LEDE  
-- 设备：小米4A千兆版
-- 插件：SSR Plus+、AdGuard Home、UPnP
-
 🏢 办公环境推荐配置：
 - 源码：OpenWrt官方
 - 设备：X86软路由
@@ -425,12 +418,12 @@ A: 编译完成后在GitHub Releases页面下载
 
 🎮 游戏加速推荐配置：
 - 源码：ImmortalWrt
-- 设备：网件R7800
+- 设备：X86软路由
 - 插件：游戏加速器、QoS、流量分析
 
 🏫 学习测试推荐配置：
 - 源码：OpenWrt官方
-- 设备：树莓派4B
+- 设备：X86虚拟机
 - 插件：Docker CE、TTYD终端、文件共享
             `;
             alert(examples);

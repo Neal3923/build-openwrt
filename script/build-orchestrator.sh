@@ -494,7 +494,7 @@ ${CYAN}示例:${NC}
   $0 generate -d x86_64 -p "luci-app-ssr-plus,luci-theme-argon"
   
   # 完整构建流程
-  $0 build -d rpi_4b -s lede-master --auto-fix
+  $0 build -d x86_64 -s lede-master --auto-fix
   
   # 仅检查
   $0 check -d x86_64 -p "luci-app-passwall" --dry-run
@@ -503,7 +503,7 @@ ${CYAN}示例:${NC}
   $0 config set .build.auto_fix_enabled false
 
 ${CYAN}支持的设备:${NC}
-  x86_64, xiaomi_4a_gigabit, newifi_d2, rpi_4b, nanopi_r2s
+  x86_64
 
 ${CYAN}架构特点:${NC}
   ✅ 模块化设计 - 各模块独立，接口标准化
@@ -641,6 +641,11 @@ main() {
     device="${device:-$(get_config_value '.build.default_device' 'x86_64')}"
     source_branch="${source_branch:-$(get_config_value '.build.default_source' 'lede-master')}"
     plugins="${plugins:-$(get_config_value '.build.default_plugins | join(",")' '')}"
+
+    if [ "$device" != "x86_64" ]; then
+        log_error "不支持的设备类型: $device（仅支持 x86_64）"
+        exit 1
+    fi
     
     # 执行对应模式
     case "$mode" in

@@ -1265,7 +1265,7 @@ check_device_compatibility() {
     
     # 简化版本的兼容性检查
     case "$device" in
-        "x86_64"|"rpi_4b"|"nanopi_r2s"|"xiaomi_4a_gigabit"|"newifi_d2")
+        "x86_64")
             log_success "设备兼容性检查通过"
             return 0
             ;;

@@ -67,10 +67,6 @@ ${CYAN}使用方法:${NC}
 
 ${CYAN}支持的设备:${NC}
   x86_64              x86_64架构设备
-  xiaomi_4a_gigabit   小米4A千兆版
-  newifi_d2           新路由D2
-  rpi_4b              树莓派4B
-  nanopi_r2s          NanoPi R2S
 
 ${CYAN}选项:${NC}
   --auto-fix          启用自动修复功能
@@ -85,7 +81,6 @@ ${CYAN}示例:${NC}
   # 基础使用
   $0 x86_64                                        # 生成x86_64基础配置
   $0 x86_64 "luci-app-ssr-plus"                   # 生成x86_64配置+SSR插件
-  $0 rpi_4b "luci-app-samba4,luci-theme-argon"    # 树莓派配置+多插件
   
   # 高级选项
   $0 x86_64 "luci-app-ssr-plus" --auto-fix        # 启用自动修复
@@ -138,7 +133,9 @@ get_device_config() {
 # ======================== X86_64 设备配置 ========================
 CONFIG_TARGET_x86=y
 CONFIG_TARGET_x86_64=y
+# 新版源码使用DEVICE_generic；Lienol 19.07仍使用旧Profile符号Generic。
 CONFIG_TARGET_x86_64_DEVICE_generic=y
+CONFIG_TARGET_x86_64_Generic=y
 
 # 引导配置
 CONFIG_GRUB_IMAGES=y
@@ -166,96 +163,9 @@ CONFIG_GRUB_EFI_IMAGES=y
 
 EOF
             ;;
-            
-        "xiaomi_4a_gigabit")
-            cat << 'EOF'
-
-# ======================== 小米4A千兆版 设备配置 ========================
-CONFIG_TARGET_ramips=y
-CONFIG_TARGET_ramips_mt7621=y
-CONFIG_TARGET_ramips_mt7621_DEVICE_xiaomi_mi-router-4a-gigabit=y
-
-# 图像压缩
-CONFIG_TARGET_IMAGES_GZIP=y
-
-# MT7621无线驱动
-CONFIG_PACKAGE_kmod-mt7603=y
-CONFIG_PACKAGE_kmod-mt76x2=y
-CONFIG_PACKAGE_wpad-basic-wolfssl=y
-
-EOF
-            ;;
-            
-        "newifi_d2")
-            cat << 'EOF'
-
-# ======================== 新路由D2 设备配置 ========================
-CONFIG_TARGET_ramips=y
-CONFIG_TARGET_ramips_mt7621=y
-CONFIG_TARGET_ramips_mt7621_DEVICE_d-team_newifi-d2=y
-
-# 图像压缩
-CONFIG_TARGET_IMAGES_GZIP=y
-
-# MT7621无线和USB驱动
-CONFIG_PACKAGE_kmod-mt7603=y
-CONFIG_PACKAGE_kmod-mt76x2=y
-CONFIG_PACKAGE_kmod-usb3=y
-CONFIG_PACKAGE_wpad-basic-wolfssl=y
-
-EOF
-            ;;
-            
-        "rpi_4b")
-            cat << 'EOF'
-
-# ======================== 树莓派4B 设备配置 ========================
-CONFIG_TARGET_bcm27xx=y
-CONFIG_TARGET_bcm27xx_bcm2711=y
-CONFIG_TARGET_bcm27xx_bcm2711_DEVICE_rpi-4=y
-
-# 分区大小
-CONFIG_TARGET_KERNEL_PARTSIZE=64
-CONFIG_TARGET_ROOTFS_PARTSIZE=2048
-CONFIG_TARGET_IMAGES_GZIP=y
-
-# 树莓派特定驱动
-CONFIG_PACKAGE_kmod-usb-net-asix=y
-CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
-CONFIG_PACKAGE_bcm27xx-gpu-fw=y
-CONFIG_PACKAGE_bcm27xx-userland=y
-
-EOF
-            ;;
-            
-        "nanopi_r2s")
-            cat << 'EOF'
-
-# ======================== NanoPi R2S 设备配置 ========================
-CONFIG_TARGET_rockchip=y
-CONFIG_TARGET_rockchip_armv8=y
-CONFIG_TARGET_rockchip_armv8_DEVICE_friendlyarm_nanopi-r2s=y
-
-# 分区大小
-CONFIG_TARGET_KERNEL_PARTSIZE=32
-CONFIG_TARGET_ROOTFS_PARTSIZE=1024
-CONFIG_TARGET_IMAGES_GZIP=y
-
-# R2S特定驱动
-CONFIG_PACKAGE_kmod-usb-net-rtl8152=y
-
-EOF
-            ;;
-            
         *)
-            log_warning "未知设备类型: $device，使用通用配置"
-            cat << 'EOF'
-
-# ======================== 通用设备配置 ========================
-# 请根据实际设备修改目标配置
-CONFIG_TARGET_IMAGES_GZIP=y
-
-EOF
+            log_error "不支持的设备类型: $device（仅支持 x86_64）"
+            return 1
             ;;
     esac
 }
@@ -608,11 +518,6 @@ validate_config_content() {
                 issues+=("X86_64配置不正确")
             fi
             ;;
-        "rpi_4b")
-            if ! echo "$config_content" | grep -q "CONFIG_TARGET_bcm27xx=y"; then
-                issues+=("树莓派配置不正确")
-            fi
-            ;;
     esac
     
     if [ ${#issues[@]} -gt 0 ]; then
@@ -700,11 +605,6 @@ detect_potential_issues() {
     
     if [[ "$plugins" == *"ssr-plus"* ]] && [[ "$plugins" == *"openclash"* ]]; then
         warnings+=("SSR Plus+ 和 OpenClash 可能存在冲突")
-    fi
-    
-    # 检查设备兼容性
-    if [[ "$device" == "xiaomi_4a_gigabit" ]] && [[ "$plugins" == *"openclash"* ]]; then
-        warnings+=("小米4A千兆版存储空间有限，OpenClash可能无法正常运行")
     fi
     
     # 显示警告
@@ -805,6 +705,11 @@ main() {
     if [ -z "$device" ]; then
         log_error "请指定设备类型"
         echo "使用 --help 查看帮助信息"
+        exit 1
+    fi
+
+    if [ "$device" != "x86_64" ]; then
+        log_error "不支持的设备类型: $device（仅支持 x86_64）"
         exit 1
     fi
     

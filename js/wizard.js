@@ -10,7 +10,7 @@ class WizardManager {
         this.config = {
             source: '',
             repoBranch: '',
-            device: '',
+            device: 'x86_64',
             plugins: [],
             customSources: [],
             optimization: 'balanced'
@@ -282,17 +282,6 @@ class WizardManager {
                 ram_size: '可变',
                 recommended: true,
                 features: ['efi', 'legacy', 'kvm', 'docker']
-            },
-            'xiaomi_4a_gigabit': {
-                name: '小米路由器4A千兆版',
-                category: 'router',
-                arch: 'ramips',
-                target: 'ramips/mt7621',
-                profile: 'xiaomi_mi-router-4a-gigabit',
-                flash_size: '16M',
-                ram_size: '128M',
-                recommended: true,
-                features: ['wifi', 'gigabit', 'usb']
             }
         };
     }
@@ -558,10 +547,8 @@ class WizardManager {
             return;
         }
 
-        // 按分类组织设备
+        // 项目仅保留X86_64设备。
         const categories = {
-            router: '🔀 路由器设备',
-            arm: '💻 ARM开发板',
             x86: '🖥️ X86设备'
         };
 

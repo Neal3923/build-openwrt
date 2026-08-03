@@ -6,7 +6,7 @@
 #========================================================================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FIXES_DIR="$SCRIPT_DIR/fixes"
+FIXES_DIR="$SCRIPT_DIR"
 
 # 颜色定义
 RED='\033[0;31m'
@@ -39,22 +39,15 @@ ${CYAN}使用方法:${NC}
 
 ${CYAN}支持的设备:${NC}
   x86_64              X86 64位设备
-  rpi_4b              树莓派4B
-  nanopi_r2s          NanoPi R2S
-  xiaomi_4a_gigabit   小米路由器4A千兆版
-  newifi_d2           新路由3
 
 ${CYAN}支持的错误类型:${NC}
   udebug              udebug/ucode依赖错误
-  imx219              树莓派摄像头补丁错误
   kernel              内核编译错误
   feeds               feeds相关错误
   auto                自动检测错误类型 (默认)
 
 ${CYAN}示例:${NC}
   $0 x86_64 udebug    # 修复X86设备的udebug错误
-  $0 rpi_4b imx219    # 修复树莓派的摄像头错误
-  $0 rpi_4b auto      # 自动检测并修复树莓派错误
   $0 x86_64           # 自动修复X86设备问题
 
 ${CYAN}文件结构:${NC}
@@ -63,8 +56,6 @@ ${CYAN}文件结构:${NC}
   └── fixes/
       ├── common.sh           # 公共函数
       ├── fix-x86.sh          # X86设备修复
-      ├── fix-rpi.sh          # 树莓派修复
-      ├── fix-nanopi.sh       # NanoPi修复
       └── fix-udebug.sh       # udebug错误修复
 EOF
 }
@@ -106,11 +97,6 @@ detect_error_type() {
                 detected_errors+=("udebug")
             fi
             
-            # 检测树莓派摄像头错误
-            if grep -q "imx219.*FAILED" "$log_file" 2>/dev/null; then
-                detected_errors+=("imx219")
-            fi
-            
             # 检测内核补丁错误
             if grep -q "Patch failed" "$log_file" 2>/dev/null; then
                 detected_errors+=("kernel")
@@ -122,16 +108,6 @@ detect_error_type() {
             fi
         fi
     fi
-    
-    # 根据设备类型预测可能的错误
-    case "$device" in
-        "rpi_4b")
-            detected_errors+=("imx219")
-            ;;
-        "x86_64")
-            detected_errors+=("udebug")
-            ;;
-    esac
     
     # 去重
     detected_errors=($(printf "%s\n" "${detected_errors[@]}" | sort -u))
@@ -160,7 +136,14 @@ run_device_fix() {
     local device="$1"
     local error_type="$2"
     
-    local device_script="$FIXES_DIR/fix-${device}.sh"
+    local device_script=""
+    case "$device" in
+        "x86_64") device_script="$FIXES_DIR/fix-x86.sh" ;;
+        *)
+            log_error "不支持的设备类型: $device（仅支持 x86_64）"
+            return 1
+            ;;
+    esac
     
     if [ -f "$device_script" ]; then
         log_info "执行设备特定修复: $device"
@@ -204,6 +187,11 @@ main() {
         show_help
         exit 1
     fi
+
+    if [ "$device" != "x86_64" ]; then
+        log_error "不支持的设备类型: $device（仅支持 x86_64）"
+        exit 1
+    fi
     
     # 检查环境
     check_environment
@@ -218,9 +206,15 @@ main() {
     
     # 自动检测错误类型
     if [ "$error_type" = "auto" ]; then
-        local detected_errors=($(detect_error_type "$device"))
+        local detected_output
+        detected_output="$(detect_error_type "$device" | tail -n 1)"
+        local detected_errors=()
+        read -ra detected_errors <<< "$detected_output"
         if [ ${#detected_errors[@]} -gt 0 ]; then
             for detected_error in "${detected_errors[@]}"; do
+                if [ "$detected_error" = "generic" ]; then
+                    continue
+                fi
                 log_info "修复检测到的错误: $detected_error"
                 run_error_fix "$detected_error" "$device"
             done

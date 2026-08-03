@@ -70,7 +70,8 @@
             "default_packages": [
                 "kmod-e1000",
                 "kmod-e1000e",
-                "kmod-r8168"
+                "kmod-igb",
+                "kmod-r8169"
             ],
             "recommended_plugins": [
                 "luci-app-ddns",
@@ -84,115 +85,6 @@
             },
             "build_config": {
                 "parallel_jobs": 0,
-                "use_ccache": true,
-                "optimize_for_size": false
-            }
-        },
-        "xiaomi_4a_gigabit": {
-            "name": "小米路由器4A千兆版",
-            "description": "小米入门级千兆路由器",
-            "architecture": "mipsel",
-            "target": "ramips/mt7621",
-            "default_packages": [
-                "kmod-mt7603",
-                "kmod-mt76x2"
-            ],
-            "recommended_plugins": [
-                "luci-app-ddns"
-            ],
-            "resource_limits": {
-                "min_flash_mb": 16,
-                "recommended_flash_mb": 16,
-                "min_ram_mb": 128,
-                "recommended_ram_mb": 128
-            },
-            "build_config": {
-                "parallel_jobs": 2,
-                "use_ccache": false,
-                "optimize_for_size": true
-            },
-            "warnings": [
-                "Flash空间有限，请谨慎选择插件",
-                "不建议安装资源密集型插件"
-            ]
-        },
-        "newifi_d2": {
-            "name": "新路由3 (Newifi D2)",
-            "description": "联发科MT7621方案路由器",
-            "architecture": "mipsel",
-            "target": "ramips/mt7621",
-            "default_packages": [
-                "kmod-mt7603",
-                "kmod-mt76x2",
-                "kmod-usb3"
-            ],
-            "recommended_plugins": [
-                "luci-app-samba4",
-                "luci-app-ddns"
-            ],
-            "resource_limits": {
-                "min_flash_mb": 32,
-                "recommended_flash_mb": 32,
-                "min_ram_mb": 256,
-                "recommended_ram_mb": 256
-            },
-            "build_config": {
-                "parallel_jobs": 4,
-                "use_ccache": true,
-                "optimize_for_size": false
-            }
-        },
-        "rpi_4b": {
-            "name": "树莓派4B",
-            "description": "ARM Cortex-A72四核处理器",
-            "architecture": "aarch64",
-            "target": "bcm27xx/bcm2711",
-            "default_packages": [
-                "bcm27xx-gpu-fw",
-                "bcm27xx-userland",
-                "kmod-usb-net-rtl8152"
-            ],
-            "recommended_plugins": [
-                "luci-app-samba4",
-                "luci-app-aria2",
-                "luci-app-ddns"
-            ],
-            "resource_limits": {
-                "min_flash_mb": 512,
-                "recommended_flash_mb": 2048,
-                "min_ram_mb": 1024,
-                "recommended_ram_mb": 4096
-            },
-            "build_config": {
-                "parallel_jobs": 4,
-                "use_ccache": true,
-                "optimize_for_size": false
-            },
-            "special_handling": {
-                "camera_patches": "disabled",
-                "gpu_acceleration": "enabled"
-            }
-        },
-        "nanopi_r2s": {
-            "name": "NanoPi R2S",
-            "description": "瑞芯微RK3328双核ARM处理器",
-            "architecture": "aarch64",
-            "target": "rockchip/armv8",
-            "default_packages": [
-                "kmod-usb-net-rtl8152"
-            ],
-            "recommended_plugins": [
-                "luci-app-ddns",
-                "luci-app-upnp"
-            ],
-            "resource_limits": {
-                "min_flash_mb": 256,
-                "recommended_flash_mb": 1024,
-                "min_ram_mb": 1024,
-                "recommended_ram_mb": 1024
-            },
-            "build_config": {
-                "parallel_jobs": 2,
                 "use_ccache": true,
                 "optimize_for_size": false
             }

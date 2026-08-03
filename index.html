@@ -85,11 +85,7 @@
                 <div class="step-content" id="step-2" style="display: none;">
                     <div class="step-header">
                         <h2>📱 选择目标设备</h2>
-                        <p>选择你要编译固件的目标设备型号</p>
-                    </div>
-
-                    <div class="search-box">
-                        <input type="text" class="search-input" data-filter="device" placeholder="🔍 搜索设备型号...">
+                        <p>当前仅支持 X86_64，已为你默认选中</p>
                     </div>
 
                     <div id="device-selection" class="selection-area">
@@ -520,7 +516,7 @@
 
         // 显示FAQ模态框
         function showFAQModal() {
-            alert('❓ 常见问题\n\nQ: 编译失败怎么办？\nA: 检查插件冲突，减少插件数量，查看编译日志\n\nQ: 如何下载固件？\nA: 编译完成后在GitHub Releases页面下载\n\nQ: 支持哪些设备？\nA: 支持主流路由器、ARM开发板、X86设备');
+            alert('❓ 常见问题\n\nQ: 编译失败怎么办？\nA: 检查插件冲突，减少插件数量，查看编译日志\n\nQ: 如何下载固件？\nA: 编译完成后在GitHub Releases页面下载\n\nQ: 支持哪些设备？\nA: 仅支持X86_64软路由、工控机和虚拟机');
         }
 
         // 显示联系支持模态框
