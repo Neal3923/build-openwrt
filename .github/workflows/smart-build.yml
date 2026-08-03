@@ -80,7 +80,7 @@ env:
 jobs:
   # 准备阶段：解析配置和设置环境
   prepare:
-    runs-on: ubuntu-24.04  # 解决Ubuntu 20.04弃用问题，升级到24.04
+    runs-on: [self-hosted, linux, x64, openwrt]
     name: 📋 配置解析
     outputs:
       source_branch: ${{ steps.config.outputs.source_branch }}
@@ -286,7 +286,7 @@ jobs:
           echo "✅ 编译环境初始化完成,配置解析完成"
   # 编译阶段：实际的固件编译过程
   build:
-    runs-on: ubuntu-24.04  # 解决Ubuntu 20.04弃用问题
+    runs-on: [self-hosted, linux, x64, openwrt]
     needs: prepare
     name: 🔨 固件编译
     if: ${{ github.event.repository.owner.id == github.event.sender.id }}  # 安全检查
@@ -417,6 +417,43 @@ jobs:
           
           echo "status=success" >> "$GITHUB_OUTPUT"
           echo "✅ 编译环境初始化完成"
+
+      - name: 🧹 安全清理旧源码目录
+        if: steps.init.outputs.status == 'success' && !cancelled()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          BUILD_ROOT="/workdir"
+          SOURCE_DIR="${BUILD_ROOT}/openwrt"
+          EXPECTED_SOURCE_DIR="/workdir/openwrt"
+
+          # 删除前校验固定目标，防止变量异常时误删其他目录。
+          if [[ "$SOURCE_DIR" != "$EXPECTED_SOURCE_DIR" || "$SOURCE_DIR" == "/" ]]; then
+            echo "::error::拒绝清理非预期目录: $SOURCE_DIR"
+            exit 1
+          fi
+
+          if [[ -L "$SOURCE_DIR" ]]; then
+            echo "🧹 删除旧源码符号链接: $SOURCE_DIR"
+            rm -f -- "$SOURCE_DIR"
+          elif [[ -d "$SOURCE_DIR" ]]; then
+            echo "🧹 删除旧源码目录: $SOURCE_DIR"
+            rm -rf --one-file-system -- "$SOURCE_DIR"
+          elif [[ -e "$SOURCE_DIR" ]]; then
+            echo "🧹 删除占用源码路径的旧文件: $SOURCE_DIR"
+            rm -f -- "$SOURCE_DIR"
+          else
+            echo "✅ 没有需要清理的旧源码目录"
+          fi
+
+          if [[ -e "$SOURCE_DIR" || -L "$SOURCE_DIR" ]]; then
+            echo "::error::旧源码目录清理失败: $SOURCE_DIR"
+            exit 1
+          fi
+
+          echo "✅ 旧源码目录已安全清理"
+
       - name: 📦 克隆源码
         id: codes
         working-directory: /workdir
