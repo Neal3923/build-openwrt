@@ -654,6 +654,9 @@ jobs:
                 KVM_CPU_PACKAGES+=("$plugin")
                 ;;
               luci-app-passwall)
+                # PassWall 的简体中文翻译由 LuCI 构建系统生成独立语言包。
+                # 将它作为配套插件强制加入并在 defconfig 后验证，避免只生成英文界面。
+                COMPANION_PLUGINS+=(luci-i18n-passwall-zh-cn)
                 # 这两个feed只用于编译PassWall源码，OpenWrt官方软件源并不发布
                 # 对应的运行时APK仓库。设为m会保留编译能力，但在固件中默认注释源。
                 RUNTIME_DISABLED_FEEDS+=(passwall passwall_packages)
