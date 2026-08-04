@@ -14,7 +14,8 @@ class WizardManager {
             rootfsPartSize: 512,
             plugins: [],
             customSources: [],
-            optimization: 'balanced'
+            optimization: 'balanced',
+            buildMode: 'actions'
         };
 
         this.isInitialized = false;
@@ -96,7 +97,7 @@ class WizardManager {
                     <span class="status-icon">⚠️</span>
                     <div class="status-info">
                         <div class="status-title">需要配置 GitHub Token</div>
-                        <div class="status-detail">点击配置按钮设置Token以启用编译功能</div>
+                        <div class="status-detail">仅使用GitHub Actions编译时需要Token</div>
                     </div>
                     <button class="btn-config-token" onclick="window.tokenModal?.show()">配置Token</button>
                 </div>
@@ -389,8 +390,14 @@ class WizardManager {
                     this.selectDevice(e.target.dataset.device);
                 } else if (e.target.matches('.plugin-checkbox')) {
                     this.togglePlugin(e.target.dataset.plugin);
+                } else if (e.target.closest('.build-mode-option')) {
+                    this.selectBuildMode(e.target.closest('.build-mode-option').dataset.buildMode);
                 } else if (e.target.matches('#start-build-btn')) {
                     this.startBuild();
+                } else if (e.target.matches('#copy-local-setup-btn')) {
+                    this.copyLocalCommand('setup');
+                } else if (e.target.matches('#copy-local-build-btn')) {
+                    this.copyLocalCommand('build');
                 }
             } catch (error) {
                 console.error('事件处理失败:', error);
@@ -794,6 +801,21 @@ class WizardManager {
             
             <div class="summary-section">
                 <h3>🚀 编译控制</h3>
+                <div class="build-mode-grid" role="group" aria-label="编译方式">
+                    <button type="button" class="build-mode-option ${this.config.buildMode === 'actions' ? 'selected' : ''}"
+                        data-build-mode="actions" aria-pressed="${this.config.buildMode === 'actions'}">
+                        <span class="build-mode-icon">☁️</span>
+                        <strong>GitHub Actions</strong>
+                        <span>云端编译并发布到Releases</span>
+                    </button>
+                    <button type="button" class="build-mode-option ${this.config.buildMode === 'local' ? 'selected' : ''}"
+                        data-build-mode="local" aria-pressed="${this.config.buildMode === 'local'}">
+                        <span class="build-mode-icon">🖥️</span>
+                        <strong>本地服务器</strong>
+                        <span>不经过Actions，固件保存在服务器</span>
+                    </button>
+                </div>
+                ${this.config.buildMode === 'actions' ? `
                 <div class="build-actions">
                     ${this.getValidToken() ? `
                         <button id="start-build-btn" class="btn btn-primary btn-large">
@@ -808,10 +830,88 @@ class WizardManager {
                         </button>
                     `}
                 </div>
+                ` : `
+                <div class="local-build-panel">
+                    <p class="local-build-note">网页不会连接服务器或保存服务器密码。首次安装一次环境，以后复制本次编译命令即可。</p>
+                    <div class="local-command-block">
+                        <div class="local-command-header">
+                            <strong>1. 首次安装（仅执行一次）</strong>
+                            <button id="copy-local-setup-btn" class="btn btn-secondary btn-small" type="button">📋 复制</button>
+                        </div>
+                        <code>${this.escapeHtml(this.generateLocalSetupCommand())}</code>
+                    </div>
+                    <div class="local-command-block">
+                        <div class="local-command-header">
+                            <strong>2. 开始本次编译</strong>
+                            <button id="copy-local-build-btn" class="btn btn-primary btn-small" type="button">📋 复制并编译</button>
+                        </div>
+                        <code>${this.escapeHtml(this.generateLocalBuildCommand())}</code>
+                    </div>
+                    <p class="local-build-safety">旧编译运行目录超过24小时后自动安全清理；下载缓存、ccache和最终固件不会删除。</p>
+                </div>
+                `}
             </div>
         `;
 
         container.innerHTML = html;
+    }
+
+    selectBuildMode(mode) {
+        if (!['actions', 'local'].includes(mode)) return;
+        this.config.buildMode = mode;
+        this.renderConfigSummary();
+    }
+
+    shellQuote(value) {
+        return `'${String(value).replace(/'/g, `'"'"'`)}'`;
+    }
+
+    escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    generateLocalSetupCommand() {
+        const repo = window.GITHUB_REPO || 'Neal3923/build-openwrt';
+        return `git clone https://github.com/${repo}.git "$HOME/build-openwrt" && cd "$HOME/build-openwrt" && sudo bash ./script/setup-local-builder.sh`;
+    }
+
+    generateLocalBuildCommand() {
+        const plugins = this.config.plugins.join(',');
+        return `cd "$HOME/build-openwrt" && git pull --ff-only && bash ./script/local-build.sh ` +
+            `--source ${this.shellQuote(this.config.source)} ` +
+            `--branch ${this.shellQuote(this.config.repoBranch)} ` +
+            `--rootfs ${this.config.rootfsPartSize} ` +
+            `--plugins ${this.shellQuote(plugins)}`;
+    }
+
+    async copyLocalCommand(type) {
+        const command = type === 'setup'
+            ? this.generateLocalSetupCommand()
+            : this.generateLocalBuildCommand();
+
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(command);
+            } else {
+                const textArea = document.createElement('textarea');
+                textArea.value = command;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                textArea.remove();
+            }
+            alert(type === 'setup' ? '首次安装命令已复制' : '本地编译命令已复制，请粘贴到服务器终端执行');
+        } catch (error) {
+            console.error('复制本地命令失败:', error);
+            alert('自动复制失败，请手动选择命令文本复制');
+        }
     }
 
     // === 选择操作方法 ===
