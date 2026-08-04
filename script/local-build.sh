@@ -365,13 +365,15 @@ fi
 
 if [ "$SOURCE_BRANCH:$REPO_BRANCH" = "openwrt-main:openwrt-25.12" ] &&
    plugin_selected luci-app-passwall; then
-  echo "🩹 检查OpenWrt 25.12 PassWall下载哈希..."
-  fix_passwall_hash() {
+  echo "🩹 检查本机生成的PassWall源码归档哈希..."
+  align_passwall_hash_with_cache() {
     local package_name="$1"
-    local upstream_hash="$2"
-    local openwrt_2512_hash="$3"
+    local archive_name="$2"
+    local approved_hash_a="$3"
+    local approved_hash_b="$4"
     local package_makefile="$OPENWRT_DIR/feeds/passwall_packages/$package_name/Makefile"
-    local current_hash
+    local archive_file="$CACHE_ROOT/dl/$archive_name"
+    local current_hash cached_hash
 
     if [ ! -f "$package_makefile" ]; then
       echo "错误：未找到PassWall软件包配置: $package_makefile" >&2
@@ -379,27 +381,48 @@ if [ "$SOURCE_BRANCH:$REPO_BRANCH" = "openwrt-main:openwrt-25.12" ] &&
     fi
 
     current_hash=$(sed -n 's/^PKG_MIRROR_HASH:=//p' "$package_makefile")
-    if [ "$current_hash" = "$upstream_hash" ]; then
-      sed -i \
-        "s/^PKG_MIRROR_HASH:=$upstream_hash$/PKG_MIRROR_HASH:=$openwrt_2512_hash/" \
-        "$package_makefile"
-    elif [ "$current_hash" != "$openwrt_2512_hash" ]; then
+    if [ "$current_hash" != "$approved_hash_a" ] &&
+       [ "$current_hash" != "$approved_hash_b" ]; then
       echo "错误：$package_name 上游哈希出现未知变化: $current_hash" >&2
       exit 1
     fi
 
-    grep -qxF "PKG_MIRROR_HASH:=$openwrt_2512_hash" "$package_makefile"
-    echo "✅ 已应用OpenWrt 25.12的 $package_name 哈希兼容修复"
+    if [ ! -s "$archive_file" ]; then
+      return
+    fi
+
+    cached_hash=$(sha256sum "$archive_file" | awk '{print $1}')
+    if [ "$cached_hash" != "$approved_hash_a" ] &&
+       [ "$cached_hash" != "$approved_hash_b" ]; then
+      echo "警告：$archive_name 缓存哈希不在允许列表中，将交给OpenWrt重新下载验证"
+      return
+    fi
+
+    if [ "$current_hash" != "$cached_hash" ]; then
+      sed -i \
+        "s/^PKG_MIRROR_HASH:=$current_hash$/PKG_MIRROR_HASH:=$cached_hash/" \
+        "$package_makefile"
+      grep -qxF "PKG_MIRROR_HASH:=$cached_hash" "$package_makefile"
+      echo "✅ 已按当前系统生成结果调整 $package_name 哈希: $cached_hash"
+    else
+      echo "✅ $package_name 缓存哈希与软件包配置一致"
+    fi
   }
 
-  fix_passwall_hash \
-    shadowsocksr-libev \
-    146fa4511a52da2aaa1e11ea0294cfb450e62643156c5da3b10e037ef43961f6 \
-    42dab453a7d8b3737109110083513467bad1cf71a0aaf671452595797b2b59b0
-  fix_passwall_hash \
-    simple-obfs \
-    bc97eba511b86a089ab4bcf0ac78d9e4a39c59046d5cde77b79a118245daa0ba \
-    b06d72a973de85fd2d45542f436e4aab5d96de6c78f4f0b9f6697e1730d1d211
+  align_passwall_hashes_with_cache() {
+    align_passwall_hash_with_cache \
+      shadowsocksr-libev \
+      shadowsocksr-libev-2.5.6.tar.zst \
+      146fa4511a52da2aaa1e11ea0294cfb450e62643156c5da3b10e037ef43961f6 \
+      42dab453a7d8b3737109110083513467bad1cf71a0aaf671452595797b2b59b0
+    align_passwall_hash_with_cache \
+      simple-obfs \
+      simple-obfs-0.0.5.tar.zst \
+      bc97eba511b86a089ab4bcf0ac78d9e4a39c59046d5cde77b79a118245daa0ba \
+      b06d72a973de85fd2d45542f436e4aab5d96de6c78f4f0b9f6697e1730d1d211
+  }
+
+  align_passwall_hashes_with_cache
 fi
 
 echo "📦 安装feeds..."
@@ -420,6 +443,12 @@ for download_target in "${DOWNLOAD_TARGETS[@]}"; do
       break
     fi
     echo "警告：${download_target} 并行下载第 $attempt 次失败"
+    if [ "$download_target" = "package/download" ] &&
+       declare -F align_passwall_hashes_with_cache >/dev/null; then
+      # 带Git子模块的源码归档会因宿主机tar/zstd版本产生两个已知哈希。
+      # 首次下载失败后归档仍在缓存中，按允许列表调整后自动重试。
+      align_passwall_hashes_with_cache
+    fi
     sleep $((attempt * 5))
   done
   if [ "$DOWNLOAD_OK" != "true" ]; then
