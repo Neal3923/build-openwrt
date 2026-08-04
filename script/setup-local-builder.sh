@@ -101,4 +101,5 @@ echo "📦 安装OpenWrt编译依赖..."
 check_commands
 
 echo "✅ 本地编译环境安装完成"
+echo "注意：正式编译必须切换到普通用户，不能使用root运行local-build.sh。"
 echo "下一步：使用网页生成的命令，或执行 bash ./script/local-build.sh --help"
