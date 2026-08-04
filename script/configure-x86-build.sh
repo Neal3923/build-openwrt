@@ -98,6 +98,7 @@ RUNTIME_DISABLED_FEEDS=()
 COMPANION_PLUGINS=()
 REQUIRED_PLUGIN_CONFIGS=()
 BANDIX_SELECTED=false
+PASSWALL_SELECTED=false
 
 for plugin in "${USER_PLUGINS[@]}"; do
   if [[ ! "$plugin" =~ ^[a-zA-Z0-9][a-zA-Z0-9._+-]*$ ]]; then
@@ -113,6 +114,7 @@ for plugin in "${USER_PLUGINS[@]}"; do
       COMPANION_PLUGINS+=(hysteria luci-i18n-passwall-zh-cn)
       REQUIRED_PLUGIN_CONFIGS+=(CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Hysteria=y)
       RUNTIME_DISABLED_FEEDS+=(passwall passwall_packages)
+      PASSWALL_SELECTED=true
       ;;
     luci-app-diskman)
       RUNTIME_DISABLED_FEEDS+=(diskman)
@@ -164,7 +166,33 @@ if [ "$BANDIX_SELECTED" = "true" ]; then
   echo '# CONFIG_PACKAGE_luci-app-turboacc is not set' >> .config
 fi
 
+if [ "$PASSWALL_SELECTED" = "true" ]; then
+  # PassWall依赖dnsmasq-full。OpenWrt默认的dnsmasq（以及部分分支的
+  # dnsmasq-dhcpv6）会安装同名文件，必须在defconfig前明确替换。
+  cat >> .config <<'EOF'
+# CONFIG_PACKAGE_dnsmasq is not set
+# CONFIG_PACKAGE_dnsmasq-dhcpv6 is not set
+CONFIG_PACKAGE_dnsmasq-full=y
+EOF
+  echo "  ✓ PassWall已使用dnsmasq-full替换默认dnsmasq"
+fi
+
 make defconfig
+
+if [ "$PASSWALL_SELECTED" = "true" ]; then
+  if ! grep -qx 'CONFIG_PACKAGE_dnsmasq-full=y' .config; then
+    echo "错误：PassWall所需的dnsmasq-full未成功启用" >&2
+    exit 1
+  fi
+
+  if grep -Eq '^CONFIG_PACKAGE_(dnsmasq|dnsmasq-dhcpv6)=y$' .config; then
+    echo "错误：dnsmasq变体发生冲突，PassWall只能与dnsmasq-full一起编译" >&2
+    grep -E '^CONFIG_PACKAGE_dnsmasq[^=]*=y$' .config >&2 || true
+    exit 1
+  fi
+
+  echo "✅ PassWall DNS依赖检查通过：仅启用dnsmasq-full"
+fi
 
 if [ "$BANDIX_SELECTED" = "true" ]; then
   if grep -qx 'CONFIG_PACKAGE_luci-app-turboacc=y' .config; then
