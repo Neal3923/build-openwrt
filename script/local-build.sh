@@ -357,23 +357,40 @@ fi
 if [ "$SOURCE_BRANCH:$REPO_BRANCH" = "openwrt-main:openwrt-25.12" ] &&
    plugin_selected luci-app-passwall; then
   echo "🩹 检查OpenWrt 25.12 PassWall下载哈希..."
-  PACKAGE_MAKEFILE="$OPENWRT_DIR/feeds/passwall_packages/shadowsocksr-libev/Makefile"
-  UPSTREAM_HASH="146fa4511a52da2aaa1e11ea0294cfb450e62643156c5da3b10e037ef43961f6"
-  OPENWRT_2512_HASH="42dab453a7d8b3737109110083513467bad1cf71a0aaf671452595797b2b59b0"
-  if [ ! -f "$PACKAGE_MAKEFILE" ]; then
-    echo "错误：未找到PassWall软件包配置。" >&2
-    exit 1
-  fi
-  CURRENT_HASH=$(sed -n 's/^PKG_MIRROR_HASH:=//p' "$PACKAGE_MAKEFILE")
-  if [ "$CURRENT_HASH" = "$UPSTREAM_HASH" ]; then
-    sed -i \
-      "s/^PKG_MIRROR_HASH:=$UPSTREAM_HASH$/PKG_MIRROR_HASH:=$OPENWRT_2512_HASH/" \
-      "$PACKAGE_MAKEFILE"
-  elif [ "$CURRENT_HASH" != "$OPENWRT_2512_HASH" ]; then
-    echo "错误：PassWall上游哈希出现未知变化: $CURRENT_HASH" >&2
-    exit 1
-  fi
-  grep -qxF "PKG_MIRROR_HASH:=$OPENWRT_2512_HASH" "$PACKAGE_MAKEFILE"
+  fix_passwall_hash() {
+    local package_name="$1"
+    local upstream_hash="$2"
+    local openwrt_2512_hash="$3"
+    local package_makefile="$OPENWRT_DIR/feeds/passwall_packages/$package_name/Makefile"
+    local current_hash
+
+    if [ ! -f "$package_makefile" ]; then
+      echo "错误：未找到PassWall软件包配置: $package_makefile" >&2
+      exit 1
+    fi
+
+    current_hash=$(sed -n 's/^PKG_MIRROR_HASH:=//p' "$package_makefile")
+    if [ "$current_hash" = "$upstream_hash" ]; then
+      sed -i \
+        "s/^PKG_MIRROR_HASH:=$upstream_hash$/PKG_MIRROR_HASH:=$openwrt_2512_hash/" \
+        "$package_makefile"
+    elif [ "$current_hash" != "$openwrt_2512_hash" ]; then
+      echo "错误：$package_name 上游哈希出现未知变化: $current_hash" >&2
+      exit 1
+    fi
+
+    grep -qxF "PKG_MIRROR_HASH:=$openwrt_2512_hash" "$package_makefile"
+    echo "✅ 已应用OpenWrt 25.12的 $package_name 哈希兼容修复"
+  }
+
+  fix_passwall_hash \
+    shadowsocksr-libev \
+    146fa4511a52da2aaa1e11ea0294cfb450e62643156c5da3b10e037ef43961f6 \
+    42dab453a7d8b3737109110083513467bad1cf71a0aaf671452595797b2b59b0
+  fix_passwall_hash \
+    simple-obfs \
+    bc97eba511b86a089ab4bcf0ac78d9e4a39c59046d5cde77b79a118245daa0ba \
+    b06d72a973de85fd2d45542f436e4aab5d96de6c78f4f0b9f6697e1730d1d211
 fi
 
 echo "📦 安装feeds..."
