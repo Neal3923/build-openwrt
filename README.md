@@ -1,12 +1,12 @@
 # 🛠️ OpenWrt 智能编译工具
 
-> 基于 GitHub Actions 的可视化 OpenWrt 固件编译平台，让固件编译变得简单高效！
+> 支持 GitHub Actions 与本地服务器的可视化 OpenWrt 固件编译平台。
 
 
 ## ✨ 项目特色
 
 - 🎯 **可视化配置** - 通过Web界面轻松选择设备和插件
-- 🚀 **智能编译** - 基于GitHub Actions云端编译，无需本地环境
+- 🚀 **两种编译方式** - 可使用GitHub Actions，也可在自己的Ubuntu服务器编译
 - 🔍 **冲突检测** - 自动检测插件冲突和依赖关系
 - 📊 **实时监控** - 按 GitHub Actions 实际步骤显示阶段和耗时
 - 🌐 **多源支持** - 支持官方OpenWrt、Lean's LEDE、ImmortalWrt等源码
@@ -103,6 +103,47 @@ https://your-username.github.io/your-repo-name
 3. 如果提示启用工作流，点击 **`I understand my workflows, go ahead and enable them`**
 4. 确认工作流已激活（应该能看到 "Smart Build" 工作流）
 
+## 🖥️ 本地服务器编译（不经过Actions）
+
+本地模式当前支持 **Ubuntu 24.04**。服务器账号不需要允许root登录，但必须可以使用`sudo`安装编译依赖。
+
+### 首次安装
+
+```bash
+git clone https://github.com/Neal3923/build-openwrt.git "$HOME/build-openwrt"
+cd "$HOME/build-openwrt"
+sudo bash ./script/setup-local-builder.sh
+```
+
+安装脚本只安装OpenWrt编译依赖，不会卸载服务器已有软件。
+
+### 从网页生成本次编译命令
+
+1. 在网页中选择源码、版本、x86_64设备、根分区容量和插件。
+2. 第4步选择 **“本地服务器”**。
+3. 点击 **“复制并编译”**。
+4. 把命令粘贴到服务器终端执行。
+
+也可以直接运行：
+
+```bash
+cd "$HOME/build-openwrt"
+git pull --ff-only
+bash ./script/local-build.sh \
+  --source openwrt-main \
+  --branch openwrt-24.10 \
+  --rootfs 1024 \
+  --plugins "luci-app-passwall,luci-app-diskman"
+```
+
+本地编译目录默认为`$HOME/build-openwrt-local`：
+
+- `runs/`：每次编译的源码与诊断日志；带安全标记且超过24小时后自动删除。
+- `cache/`：下载缓存与ccache，不会自动删除。
+- `output/`：最终固件、SHA256校验和完整日志，不会自动删除。
+
+本地编译会自动使用`nproc`检测到的全部CPU线程。相同下载文件和编译缓存可以在后续任务中复用，但同一服务器同一时间只允许运行一个任务，避免缓存损坏或内存不足。
+
 ## 📖 使用指南
 
 ### 基本使用流程
@@ -111,7 +152,7 @@ https://your-username.github.io/your-repo-name
    - 打开你的 GitHub Pages 地址
    - 或者下载项目文件，本地打开 `index.html`
 
-2. **配置 GitHub Token**（首次使用）
+2. **配置 GitHub Token**（仅GitHub Actions方式需要）
    - 点击页面右上角的 "⚙️ 配置" 按钮
    - 在弹出的对话框中输入你的 GitHub Token
    - 确认后保存配置
@@ -121,15 +162,15 @@ https://your-username.github.io/your-repo-name
    - **目标设备**：选择你的路由器型号
    - **功能插件**：勾选需要的软件包
 
-4. **开始编译**
+4. **选择编译方式并开始**
    - 检查配置信息
-   - 点击 "🚀 开始编译" 按钮
-   - 系统会自动连接本次 GitHub Actions 任务
+   - GitHub Actions方式点击“开始编译”，完成后从Releases下载
+   - 本地服务器方式复制网页生成的命令，在服务器终端执行
 
 5. **监控编译进度**
-   - 在网页查看实际工作流阶段、状态记录和已运行时间
-   - 刷新页面后会自动恢复当前任务的监控
-   - 编译完成后下载固件文件
+   - GitHub Actions方式可在网页查看实际工作流阶段、状态记录和已运行时间
+   - 本地服务器方式直接在终端查看完整实时日志
+   - Actions固件从Releases下载；本地固件保存在`$HOME/build-openwrt-local/output/`
 
 ### 支持的源码分支
 
