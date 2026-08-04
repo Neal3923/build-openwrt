@@ -79,6 +79,9 @@ CONFIG_LUCI_LANG_zh_Hans=y
 EOF
 echo "CONFIG_TARGET_ROOTFS_PARTSIZE=$ROOTFS_PARTSIZE" >> .config
 if [ "$ENABLE_CCACHE" = "true" ]; then
+  # OpenWrt将CCACHE放在开发者高级选项中；未启用DEVEL时，
+  # make defconfig会自动丢弃CONFIG_CCACHE。
+  echo 'CONFIG_DEVEL=y' >> .config
   echo 'CONFIG_CCACHE=y' >> .config
 fi
 
