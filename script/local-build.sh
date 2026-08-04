@@ -37,6 +37,9 @@ show_help() {
   runs/    每次编译的独立源码目录，超过24小时后安全清理
   cache/   下载缓存和ccache，不自动删除
   output/  最终固件、校验文件和日志，不自动删除
+
+要求:
+  必须使用普通用户运行；请勿使用root编译OpenWrt。
 EOF
 }
 
@@ -81,6 +84,12 @@ while (( $# > 0 )); do
       ;;
   esac
 done
+
+if (( EUID == 0 )); then
+  echo "错误：禁止使用root运行本地编译。" >&2
+  echo "请切换到普通用户后重新运行（例如：sudo -iu actions）。" >&2
+  exit 1
+fi
 
 if [[ ! "$ROOTFS_PARTSIZE" =~ ^[0-9]+$ ]] ||
    (( ROOTFS_PARTSIZE < 128 || ROOTFS_PARTSIZE > 4096 )); then
