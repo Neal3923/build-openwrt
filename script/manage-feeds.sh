@@ -23,6 +23,9 @@ declare -A PLUGIN_FEEDS_MAP=(
 
     # Bandix前端和后端
     ["luci-app-bandix"]="src-git bandix https://github.com/timsaya/openwrt-bandix;src-git bandix_luci https://github.com/timsaya/luci-app-bandix"
+
+    # 网络向导2.1.5（上游已使用官方OpenWrt 24.10和Snapshot SDK构建验证）
+    ["luci-app-netwizard"]="src-git netwizard https://github.com/sirpdboy/luci-app-netwizard^7867a28e711269889ca1c999a0ce844c3adb45a0"
     
     # 其他常用插件
     ["luci-app-adguardhome"]="src-git adguardhome https://github.com/rufengsuixing/luci-app-adguardhome"

@@ -270,6 +270,18 @@ init_plugin_database() {
           "size": "~5MB",
           "complexity": "medium",
           "priority": 2
+        },
+        "luci-app-netwizard": {
+          "name": "网络向导",
+          "description": "PPPoE、DHCP和旁路由快速配置；应用设置会重建网络配置，请先备份",
+          "author": "sirpdboy",
+          "feeds": ["src-git netwizard https://github.com/sirpdboy/luci-app-netwizard^7867a28e711269889ca1c999a0ce844c3adb45a0"],
+          "feeds_comment": "2.1.5已验证官方OpenWrt 24.10和Snapshot；其他24.10衍生分支未验证",
+          "dependencies": ["luci-i18n-netwizard-zh-cn", "luci-ssl", "openssl-util"],
+          "conflicts": [],
+          "size": "~2MB",
+          "complexity": "medium",
+          "priority": 2
         }
       }
     },

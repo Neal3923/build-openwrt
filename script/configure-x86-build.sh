@@ -124,6 +124,10 @@ for plugin in "${USER_PLUGINS[@]}"; do
       RUNTIME_DISABLED_FEEDS+=(bandix bandix_luci)
       BANDIX_SELECTED=true
       ;;
+    luci-app-netwizard)
+      COMPANION_PLUGINS+=(luci-i18n-netwizard-zh-cn luci-ssl openssl-util)
+      RUNTIME_DISABLED_FEEDS+=(netwizard)
+      ;;
     luci-theme-argon)
       COMPANION_PLUGINS+=(luci-app-argon-config)
       ;;
