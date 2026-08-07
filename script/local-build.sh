@@ -459,9 +459,10 @@ for download_target in "${DOWNLOAD_TARGETS[@]}"; do
 done
 
 echo "🔨 使用$(nproc)个线程编译固件..."
-if ! make -j"$(nproc)"; then
-  echo "警告：并行编译失败，改用单线程输出详细错误"
-  make -j1 V=s
+if ! make -j"$(nproc)" BUILD_LOG=1; then
+  echo "错误：并行编译失败，正在输出失败包的详细日志" >&2
+  bash "$SCRIPT_DIR/report-build-failures.sh" "$OPENWRT_DIR"
+  exit 1
 fi
 
 echo "📦 整理本地编译产物..."
