@@ -222,6 +222,19 @@ const PLUGIN_CONFIGS = {
         },
         size: '5M',
         stability: 'stable'
+      },
+      'luci-app-netwizard': {
+        name: '网络向导',
+        description: 'PPPoE/DHCP/旁路由快速配置（⚠️ 应用设置会重建网络配置，请先备份）',
+        requires: ['luci-i18n-netwizard-zh-cn', 'luci-ssl', 'openssl-util'],
+        supported_source_branches: {
+          'openwrt-main': ['main', 'openwrt-25.12', 'openwrt-24.10'],
+          'immortalwrt-master': ['master', 'openwrt-25.12'],
+          'Lienol-master': ['25.12']
+        },
+        compatibility_message: '网络向导 2.1.5 支持官方 OpenWrt 24.10，以及 25.12 与更新分支；其他 24.10 衍生分支尚未验证',
+        size: '2M',
+        stability: 'beta'
       }
     }
   },

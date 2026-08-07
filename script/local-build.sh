@@ -182,6 +182,18 @@ if plugin_selected luci-theme-argon; then
   esac
 fi
 
+if plugin_selected luci-app-netwizard; then
+  case "$SOURCE_BRANCH:$REPO_BRANCH" in
+    openwrt-main:main|openwrt-main:openwrt-25.12|openwrt-main:openwrt-24.10|\
+    immortalwrt-master:master|immortalwrt-master:openwrt-25.12|\
+    Lienol-master:25.12) ;;
+    *)
+      echo "错误：网络向导2.1.5支持官方OpenWrt 24.10，以及25.12与更新分支；当前源码分支尚未验证。" >&2
+      exit 1
+      ;;
+  esac
+fi
+
 if plugin_selected kmod-kvm-intel && plugin_selected kmod-kvm-amd; then
   echo "错误：Intel与AMD KVM模块不能同时选择。" >&2
   exit 1
@@ -336,6 +348,7 @@ verify_pinned_feed() {
 }
 verify_pinned_feed passwall_packages
 verify_pinned_feed passwall
+verify_pinned_feed netwizard
 
 if plugin_selected luci-theme-argon; then
   echo "🎨 安装Argon独立源码包..."

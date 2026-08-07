@@ -93,6 +93,7 @@ ${CYAN}支持的插件:${NC}
   luci-app-openclash  OpenClash 代理工具
   luci-app-samba4     Samba4 文件共享
   luci-app-aria2      Aria2 下载工具
+  luci-app-netwizard  网络向导
   luci-theme-argon    Argon 主题
   luci-theme-material Material 主题
   ... 更多插件请参考插件数据库
@@ -414,7 +415,19 @@ CONFIG_PACKAGE_luci-i18n-wol-zh-cn=y
 CONFIG_PACKAGE_etherwake=y
 EOF
             ;;
-            
+
+        "luci-app-netwizard")
+            cat << 'EOF'
+
+# ======================== 网络向导 ========================
+CONFIG_PACKAGE_luci-app-netwizard=y
+CONFIG_PACKAGE_luci-i18n-netwizard-zh-cn=y
+CONFIG_PACKAGE_luci-ssl=y
+CONFIG_PACKAGE_openssl-util=y
+CONFIG_FEED_netwizard=m
+EOF
+            ;;
+
         "luci-theme-argon")
             cat << 'EOF'
 

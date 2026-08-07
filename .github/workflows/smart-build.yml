@@ -255,6 +255,20 @@ jobs:
                 ;;
             esac
           fi
+
+          # 网络向导2.1.5已由上游使用官方OpenWrt 24.10和Snapshot SDK构建验证。
+          if [[ ",$PLUGINS_LIST," == *",luci-app-netwizard,"* ]]; then
+            case "$SOURCE_BRANCH:$REPO_BRANCH" in
+              openwrt-main:main|openwrt-main:openwrt-25.12|openwrt-main:openwrt-24.10|\
+              immortalwrt-master:master|immortalwrt-master:openwrt-25.12|\
+              Lienol-master:25.12)
+                ;;
+              *)
+                echo "::error::网络向导2.1.5支持官方OpenWrt 24.10，以及25.12与更新分支；当前未验证 $SOURCE_BRANCH / $REPO_BRANCH"
+                exit 1
+                ;;
+            esac
+          fi
           
           # 本项目只构建x86_64，拒绝旧页面或手工请求传入的其他设备值。
           if [ "$TARGET_DEVICE" != "x86_64" ]; then
@@ -519,6 +533,7 @@ jobs:
 
           verify_pinned_feed passwall_packages
           verify_pinned_feed passwall
+          verify_pinned_feed netwizard
           echo "✅ feeds更新完成"
 
       - name: 🎨 安装 Argon 独立源码包

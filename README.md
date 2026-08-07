@@ -49,7 +49,7 @@
 | 分类 | 插件 |
 | --- | --- |
 | 网络代理 | SSR Plus+、PassWall、OpenClash |
-| 网络工具 | AdGuard Home、动态 DNS、UPnP、Bandix 流量监控 |
+| 网络工具 | AdGuard Home、动态 DNS、UPnP、Bandix 流量监控、网络向导 |
 | 系统管理 | Docker CE、DiskMan、Intel KVM、AMD KVM、TTYD、网络唤醒 |
 | 多媒体 | Aria2、Transmission、Samba4、MiniDLNA |
 | 界面主题 | Argon 主题及其设置界面 |
@@ -60,6 +60,7 @@
 - Intel KVM 与 AMD KVM 只能选择一个；工作流会同时启用通用 `kmod-kvm-x86`。
 - PassWall 会自动加入简体中文语言包、Hysteria，并使用 `dnsmasq-full` 替换冲突的 dnsmasq 变体。
 - Bandix 会自动关闭硬件流量卸载和 Turbo ACC，仅允许网页列出的兼容分支。
+- 网络向导固定使用上游 2.1.5，对官方 OpenWrt 24.10 及 25.12/更新分支开放；ImmortalWrt、Lienol 的 24.10 和 Lean's LEDE 尚无上游构建证明，因此会被阻止。构建时自动加入简体中文包、`luci-ssl` 和 `openssl-util`。应用向导设置会重建网络配置，使用前必须备份。
 - Argon 会同时加入 `luci-app-argon-config`，不兼容的源码分支会在网页提示并被工作流拒绝。
 - Radicale3 当前不是网页可选插件。兼容脚本只在源码自带 Radicale3 但缺少依赖时补充官方 `rpcd-mod-rad3-enc`，不会自动把 Radicale3 编入固件。
 
