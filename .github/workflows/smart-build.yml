@@ -675,10 +675,11 @@ jobs:
           cd openwrt
           
           echo "使用 $(nproc) 线程编译"
-          # 先并行编译；失败时只重试一次单线程详细日志，避免重复三次完整构建。
-          if ! make -j"$(nproc)"; then
-            echo "::warning::并行编译失败，切换到单线程详细日志"
-            make -j1 V=s
+          # OpenWrt为每个包保存独立日志；失败时直接输出对应日志，避免单线程重编整个固件。
+          if ! make -j"$(nproc)" BUILD_LOG=1; then
+            echo "::error::并行编译失败，正在输出失败包的详细日志"
+            bash "$GITHUB_WORKSPACE/script/report-build-failures.sh" "$PWD"
+            exit 1
           fi
           
           echo "status=success" >> "$GITHUB_OUTPUT"
