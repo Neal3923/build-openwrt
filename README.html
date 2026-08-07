@@ -211,7 +211,7 @@
     <div class="container">
         <div class="header">
             <h1>🛠️ OpenWrt智能编译工具</h1>
-            <p>基于GitHub Actions的可视化固件编译平台</p>
+            <p>面向x86_64的可视化固件编译平台 · 支持GitHub Actions与Ubuntu本地服务器</p>
         </div>
 
         <div class="usage-steps">
@@ -219,112 +219,123 @@
                 <div class="step-number">1</div>
                 <div class="step-title">🚀 项目准备</div>
                 <div class="step-content">
-                    <strong>Fork项目到你的GitHub：</strong>
+                    <strong>使用GitHub Actions：</strong>
                     <ul>
-                        <li>点击项目右上角的 "Fork" 按钮</li>
-                        <li>选择复制到你的GitHub账户</li>
-                        <li>等待项目复制完成</li>
+                        <li>Fork项目到自己的GitHub账户</li>
+                        <li>在 <code>js/config-data.js</code> 中修改 <code>GITHUB_REPO</code></li>
+                        <li>打开Actions页面并启用Fork中的工作流</li>
+                        <li>在Settings → Pages中选择从默认分支的根目录部署</li>
                     </ul>
                     <br>
-                    <strong>启用GitHub Actions：</strong>
-                    <ul>
-                        <li>进入你Fork的项目</li>
-                        <li>点击 "Actions" 标签页</li>
-                        <li>点击启用工作流按钮</li>
-                    </ul>
+                    Pages地址通常为：<br>
+                    <code>https://用户名.github.io/仓库名/</code>
                 </div>
             </div>
 
             <div class="step-card">
                 <div class="step-number">2</div>
-                <div class="step-title">⚙️ 配置设置</div>
+                <div class="step-title">🔑 配置Token</div>
                 <div class="step-content">
-                    <strong>修改配置文件：</strong>
-                    <div class="code-block">
-                        // 编辑 js/config-data.js
-                        const GITHUB_REPO = 'your-username/your-repo-name';
-                        const GITHUB_TOKEN = 'your-token'; // 可选
-                    </div>
-                    <strong>启用GitHub Pages（推荐）：</strong>
+                    <strong>推荐使用fine-grained Token：</strong>
                     <ul>
-                        <li>项目Settings → Pages</li>
-                        <li>Source选择 "Deploy from a branch"</li>
-                        <li>Branch选择 "main" 或 "master"</li>
+                        <li>Repository access只选择自己的编译仓库</li>
+                        <li>Contents设置为Read and write</li>
+                        <li>Actions设置为Read-only</li>
+                        <li>不要把Token写入源码或提交到仓库</li>
                     </ul>
+                    <br>
+                    不想配置网页Token时，可在Actions页面使用“Run workflow”手动编译。
                 </div>
             </div>
 
             <div class="step-card">
                 <div class="step-number">3</div>
-                <div class="step-title">🎯 选择源码</div>
+                <div class="step-title">🎯 选择源码与分支</div>
                 <div class="step-content">
-                    <strong>支持的源码分支：</strong>
+                    <strong>当前支持：</strong>
                     <ul>
-                        <li><strong>OpenWrt官方：</strong>最新稳定版，兼容性最好</li>
-                        <li><strong>Lean's LEDE：</strong>国内热门分支，插件丰富</li>
-                        <li><strong>ImmortalWrt：</strong>增强版官方固件</li>
+                        <li><strong>OpenWrt官方：</strong>main、25.12、24.10、23.05</li>
+                        <li><strong>Lean's LEDE：</strong>master及三个历史快照</li>
+                        <li><strong>ImmortalWrt：</strong>master、25.12、24.10、23.05</li>
+                        <li><strong>Lienol：</strong>25.12、24.10、23.05、19.07</li>
                     </ul>
                     <br>
-                    <strong>推荐选择：</strong>
-                    <ul>
-                        <li>新手用户：选择 OpenWrt官方</li>
-                        <li>国内用户：选择 Lean's LEDE</li>
-                        <li>追求稳定：选择 ImmortalWrt</li>
-                    </ul>
+                    当前目标设备固定为<strong>x86_64 Generic</strong>。根分区容量可设置为128–4096 MiB，默认512 MiB。
                 </div>
             </div>
 
             <div class="step-card">
                 <div class="step-number">4</div>
-                <div class="step-title">📱 选择设备</div>
+                <div class="step-title">🔧 选择插件</div>
                 <div class="step-content">
-                    <strong>支持的设备类型：</strong>
+                    <strong>插件分类：</strong>
                     <ul>
-                        <li><strong>X86_64设备：</strong>虚拟机、软路由、工控机</li>
+                        <li><strong>代理：</strong>SSR Plus+、PassWall、OpenClash</li>
+                        <li><strong>网络：</strong>AdGuard Home、DDNS、UPnP、Bandix</li>
+                        <li><strong>系统：</strong>Docker、DiskMan、KVM、TTYD、WOL</li>
+                        <li><strong>多媒体：</strong>Aria2、Transmission、Samba4、MiniDLNA</li>
+                        <li><strong>主题：</strong>Argon及其设置界面</li>
                     </ul>
                     <br>
-                    当前仅支持 X86_64 目标。
+                    网页和工作流会同时检查代理互斥、Intel/AMD KVM互斥及分支兼容性。
                 </div>
             </div>
 
             <div class="step-card">
                 <div class="step-number">5</div>
-                <div class="step-title">🔧 选择插件</div>
+                <div class="step-title">☁️ Actions编译</div>
                 <div class="step-content">
-                    <strong>插件分类：</strong>
+                    <strong>操作流程：</strong>
                     <ul>
-                        <li><strong>网络代理：</strong>SSR Plus+、PassWall、OpenClash</li>
-                        <li><strong>网络工具：</strong>AdGuard Home、动态DNS、UPnP</li>
-                        <li><strong>系统管理：</strong>Docker CE、TTYD终端、带宽监控</li>
-                        <li><strong>多媒体：</strong>Aria2、Transmission、Samba</li>
+                        <li>在网页完成四步配置</li>
+                        <li>选择GitHub Actions并开始编译</li>
+                        <li>进度根据Actions实际步骤显示</li>
+                        <li>成功后从Releases下载固件和SHA256校验文件</li>
                     </ul>
                     <br>
-                    <strong>智能冲突检测：</strong>
-                    <ul>
-                        <li>自动检测插件冲突和依赖关系</li>
-                        <li>根据设备存储容量提醒</li>
-                        <li>检查架构兼容性</li>
-                    </ul>
+                    项目不再上传重复的Actions Artifact。完整编译可能持续数小时，以Actions页面状态为准。
                 </div>
             </div>
 
             <div class="step-card">
                 <div class="step-number">6</div>
-                <div class="step-title">📊 编译监控</div>
+                <div class="step-title">🖥️ 本地服务器编译</div>
                 <div class="step-content">
-                    <strong>实时监控功能：</strong>
+                    当前支持Ubuntu 24.04。安装依赖可以使用root或sudo，正式编译必须使用普通账号，不要求创建actions用户。
+                    <br>
+                    <div class="code-block">git clone https://github.com/Neal3923/build-openwrt.git "$HOME/build-openwrt"
+cd "$HOME/build-openwrt"
+sudo bash ./script/setup-local-builder.sh</div>
+                    Fork用户可替换为自己的仓库地址。网页第4步选择“本地服务器”，复制本次编译命令即可。脚本会使用全部CPU线程。
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">7</div>
+                <div class="step-title">📁 本地产物与清理</div>
+                <div class="step-content">
+                    默认目录为 <code>$HOME/build-openwrt-local</code>：
                     <ul>
-                        <li>📈 按实际工作流步骤显示阶段进度</li>
-                        <li>📝 步骤开始、完成、跳过和失败状态记录</li>
-                        <li>⏱️ 已运行时间统计</li>
-                        <li>🔄 刷新页面后自动恢复本次任务监控</li>
+                        <li><strong>runs：</strong>独立源码与诊断日志，超过24小时后安全清理</li>
+                        <li><strong>cache：</strong>下载缓存和ccache，不自动删除</li>
+                        <li><strong>output：</strong>固件、校验文件和完整日志，不自动删除</li>
                     </ul>
                     <br>
-                    <strong>编译时间：</strong>
+                    同一工作根目录一次只运行一个任务，避免缓存损坏或内存不足。
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">8</div>
+                <div class="step-title">🔐 固件默认设置</div>
+                <div class="step-content">
                     <ul>
-                        <li>简单配置：约2-3小时</li>
-                        <li>复杂配置：约3-5小时</li>
+                        <li><strong>管理地址：</strong>10.0.0.1</li>
+                        <li><strong>用户名：</strong>root</li>
+                        <li><strong>密码：</strong>root</li>
                     </ul>
+                    <br>
+                    这些值用于全新刷写或恢复出厂设置。检测到root已有密码时会保留当前地址和密码；首次登录后请立即修改默认密码。
                 </div>
             </div>
         </div>
@@ -334,23 +345,23 @@
             <div class="feature-grid">
                 <div class="feature-item">
                     <div class="feature-icon">🎯</div>
-                    <h4>合理选择插件</h4>
-                    <p>根据实际需求选择插件，避免选择过多导致编译失败</p>
+                    <h4>优先稳定分支</h4>
+                    <p>生产环境优先使用所选源码的稳定版分支</p>
                 </div>
                 <div class="feature-item">
                     <div class="feature-icon">⚡</div>
-                    <h4>优先稳定版本</h4>
-                    <p>新手建议选择稳定的源码分支和常见设备</p>
+                    <h4>复用本地缓存</h4>
+                    <p>本地编译会保留下载缓存和ccache，加快后续任务</p>
                 </div>
                 <div class="feature-item">
                     <div class="feature-icon">🔍</div>
                     <h4>查看编译日志</h4>
-                    <p>编译失败时仔细查看日志，根据错误信息调整配置</p>
+                    <p>定位第一条明确错误，后续信息通常只是连锁结果</p>
                 </div>
                 <div class="feature-item">
                     <div class="feature-icon">💾</div>
-                    <h4>注意存储空间</h4>
-                    <p>根据设备Flash大小合理控制固件体积</p>
+                    <h4>校验固件</h4>
+                    <p>刷写前使用发布页中的sha256sums.txt核对文件</p>
                 </div>
             </div>
         </div>
@@ -358,76 +369,25 @@
         <div class="warning-box">
             <div class="warning-title">⚠️ 重要提醒</div>
             <ul>
-                <li><strong>GitHub Actions配额：</strong>免费账户每月2000分钟，请合理安排编译频率</li>
-                <li><strong>刷机风险：</strong>固件刷写有风险，请确认设备型号并备份原厂固件</li>
-                <li><strong>兼容性：</strong>首次使用建议选择知名设备和稳定源码进行测试</li>
-                <li><strong>网络环境：</strong>编译过程需要下载大量代码，请确保网络稳定</li>
+                <li><strong>默认密码：</strong>root/root安全性很低，首次登录后必须修改</li>
+                <li><strong>Token：</strong>不要写入源码，不要在公共电脑上保存</li>
+                <li><strong>刷机风险：</strong>刷写前确认x86_64目标并备份现有系统和配置</li>
+                <li><strong>KVM：</strong>Intel与AMD模块不能同时选择，请按CPU厂商选择</li>
+                <li><strong>网络：</strong>编译需要下载大量代码和依赖，请确保连接稳定</li>
             </ul>
         </div>
 
         <div class="btn-group">
-            <a href="#" class="btn btn-primary" onclick="startDemo()">
-                🚀 开始体验
+            <a href="./index.html" class="btn btn-primary">
+                🚀 开始配置
             </a>
-            <a href="#" class="btn btn-secondary" onclick="showHelp()">
-                📖 查看文档
-            </a>
-            <a href="#" class="btn btn-secondary" onclick="showExamples()">
-                💡 查看示例
+            <a href="./README.md" class="btn btn-secondary">
+                📖 完整说明
             </a>
         </div>
     </div>
 
     <script>
-        // 演示功能函数
-        function startDemo() {
-            alert('🎉 欢迎使用OpenWrt智能编译工具！\n\n请按照以下步骤：\n1. Fork项目到你的GitHub\n2. 启用GitHub Actions\n3. 访问项目主页开始配置\n4. 选择源码、设备和插件\n5. 开始编译并监控进度');
-        }
-
-        function showHelp() {
-            const helpText = `
-📚 常见问题解答：
-
-Q: 编译失败了怎么办？
-A: 检查配置冲突、减少插件数量、查看编译日志
-
-Q: 固件太大无法刷入？
-A: 减少插件选择或启用体积优化选项  
-
-Q: 支持哪些设备？
-A: 仅支持X86_64软路由、工控机和虚拟机
-
-Q: 编译需要多长时间？
-A: 根据配置复杂度，通常需要1-3小时
-
-Q: 如何下载编译好的固件？
-A: 编译完成后在GitHub Releases页面下载
-            `;
-            alert(helpText);
-        }
-
-        function showExamples() {
-            const examples = `
-💡 配置示例：
-
-🏢 办公环境推荐配置：
-- 源码：OpenWrt官方
-- 设备：X86软路由
-- 插件：多线负载均衡、带宽监控、VPN服务
-
-🎮 游戏加速推荐配置：
-- 源码：ImmortalWrt
-- 设备：X86软路由
-- 插件：游戏加速器、QoS、流量分析
-
-🏫 学习测试推荐配置：
-- 源码：OpenWrt官方
-- 设备：X86虚拟机
-- 插件：Docker CE、TTYD终端、文件共享
-            `;
-            alert(examples);
-        }
-
         // 页面加载动画
         document.addEventListener('DOMContentLoaded', function () {
             const cards = document.querySelectorAll('.step-card');

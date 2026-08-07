@@ -178,6 +178,47 @@ EOF
   echo "  ✓ PassWall已使用dnsmasq-full替换默认dnsmasq"
 fi
 
+# 通过首次启动脚本设置所有受支持源码分支通用的默认网络和登录信息。
+# OpenWrt固定使用root管理账户，因此只需要配置root密码。
+mkdir -p files/etc/uci-defaults
+cat > files/etc/uci-defaults/99-build-openwrt-defaults <<'EOF'
+#!/bin/sh
+
+# uci-defaults在升级后的首次启动也会运行。检测到root已有可用密码时，
+# 视为正在保留现有配置，避免重置用户的管理地址和登录密码。
+ROOT_PASSWORD_HASH="$(awk -F: '$1 == "root" { print $2; exit }' /etc/shadow 2>/dev/null)"
+case "$ROOT_PASSWORD_HASH" in
+  ''|'!'|'*') ;;
+  *)
+    logger -t build-openwrt-defaults 'existing root password detected; keeping current settings'
+    exit 0
+    ;;
+esac
+
+if ! uci -q set network.lan.ipaddr='10.0.0.1' ||
+   ! uci -q commit network; then
+  logger -t build-openwrt-defaults 'failed to set the default LAN address'
+  exit 1
+fi
+
+PASSWORD_SET=false
+if command -v chpasswd >/dev/null 2>&1 &&
+   printf '%s\n' 'root:root' | chpasswd; then
+  PASSWORD_SET=true
+elif printf '%s\n%s\n' 'root' 'root' | passwd root >/dev/null 2>&1; then
+  PASSWORD_SET=true
+fi
+
+if [ "$PASSWORD_SET" != "true" ]; then
+  logger -t build-openwrt-defaults 'failed to set the root password'
+  exit 1
+fi
+
+exit 0
+EOF
+chmod 0755 files/etc/uci-defaults/99-build-openwrt-defaults
+echo "✅ 默认管理设置：IP 10.0.0.1，用户名 root，密码 root"
+
 make defconfig
 
 if [ "$PASSWALL_SELECTED" = "true" ]; then
