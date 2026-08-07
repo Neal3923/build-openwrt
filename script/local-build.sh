@@ -426,6 +426,7 @@ if [ "$SOURCE_BRANCH:$REPO_BRANCH" = "openwrt-main:openwrt-25.12" ] &&
 fi
 
 echo "📦 安装feeds..."
+bash "$SCRIPT_DIR/install-radicale3-backport.sh" "$OPENWRT_DIR"
 ./scripts/feeds install -a
 
 bash "$SCRIPT_DIR/configure-x86-build.sh" \

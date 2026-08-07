@@ -616,6 +616,7 @@ jobs:
           set -euo pipefail
           echo "📦 开始安装feeds..."
           cd openwrt/
+          bash "$GITHUB_WORKSPACE/script/install-radicale3-backport.sh" "$PWD"
           ./scripts/feeds install -a
           echo "✅ feeds安装完成"
       - name: 🔧 生成最终编译配置
