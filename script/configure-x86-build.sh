@@ -87,6 +87,7 @@ fi
 
 RECOMMENDED_PLUGINS=(
   luci kmod-e1000 kmod-e1000e kmod-igb kmod-r8169
+  block-mount kmod-wireguard wireguard-tools
 )
 USER_PLUGINS=()
 if [ -n "$PLUGINS_LIST" ]; then
