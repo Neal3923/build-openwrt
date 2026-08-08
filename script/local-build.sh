@@ -349,6 +349,7 @@ verify_pinned_feed() {
 verify_pinned_feed passwall_packages
 verify_pinned_feed passwall
 verify_pinned_feed netwizard
+bash "$SCRIPT_DIR/patch-netwizard-docker-firewall.sh" "$OPENWRT_DIR"
 
 if plugin_selected luci-theme-argon; then
   echo "🎨 安装Argon独立源码包..."

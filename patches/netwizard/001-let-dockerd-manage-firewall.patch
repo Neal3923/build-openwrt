@@ -1,0 +1,62 @@
+diff --git a/luci-app-netwizard/root/etc/init.d/netwizard b/luci-app-netwizard/root/etc/init.d/netwizard
+index d429a13..2abe129 100755
+--- a/luci-app-netwizard/root/etc/init.d/netwizard
++++ b/luci-app-netwizard/root/etc/init.d/netwizard
+@@ -573,23 +573,3 @@ configure_network() {
+     [ "x$ifname" = "xdevice" ] && $UCISET network.@$ifname[0].ports="${lannet}" || $UCISET network.lan.$ifname="${lannet}"
+-    if [ -f /etc/config/dockerd ]; then
+-	     DOCKERINDEX=$(uci show firewall | grep -E "@zone\[[0-9]+\].name='docker'" | sed -n 's/.*@zone\[\([0-9]*\)\].name.*/\1/p')
+-             [ -n "$DOCKERINDEX" ] && $UCIDEL firewall.@zone[$DOCKERINDEX]
+-        uci -q batch <<EOF
+-            add firewall zone
+-            set firewall.@zone[-1].name='docker'
+-            set firewall.@zone[-1].input='ACCEPT'
+-            set firewall.@zone[-1].output='ACCEPT'
+-            set firewall.@zone[-1].forward='ACCEPT'
+-            add_list firewall.@zone[-1].subnet='172.16.0.0/12'
+-            set firewall.docker_to_wan=forwarding
+-            set firewall.docker_to_wan.src='docker'
+-            set firewall.docker_to_wan.dest='wan'
+-            set firewall.docker_to_lan=forwarding
+-            set firewall.docker_to_lan.src='docker'
+-            set firewall.docker_to_lan.dest='lan'
+-            set firewall.lan_to_docker=forwarding
+-            set firewall.lan_to_docker.src='lan'
+-            set firewall.lan_to_docker.dest='docker'
+-EOF
+-    fi
++    # The official dockerd init script exclusively owns its network and firewall zone.
+     if [ "$wan_proto" != "siderouter" ]; then
+diff --git a/luci-app-netwizard/root/etc/uci-defaults/40-luci-netwizard b/luci-app-netwizard/root/etc/uci-defaults/40-luci-netwizard
+index d037c82..9013682 100644
+--- a/luci-app-netwizard/root/etc/uci-defaults/40-luci-netwizard
++++ b/luci-app-netwizard/root/etc/uci-defaults/40-luci-netwizard
+@@ -1,4 +1,28 @@
+ #!/bin/sh
++
++# Migrate configurations created by older NetWizard releases. Keep the named
++# firewall.docker section owned by dockerd and remove anonymous duplicates.
++remove_legacy_docker_zone() {
++    local section="$1"
++    local zone_name
++
++    config_get zone_name "$section" name
++    [ "$zone_name" = "docker" ] || return 0
++    case "$section" in
++        cfg*) uci -q delete "firewall.$section" ;;
++    esac
++}
++
++if [ -f /etc/config/firewall ]; then
++    . /lib/functions.sh
++    config_load firewall
++    config_foreach remove_legacy_docker_zone zone
++    uci -q delete firewall.docker_to_wan
++    uci -q delete firewall.docker_to_lan
++    uci -q delete firewall.lan_to_docker
++    uci -q commit firewall
++fi
++
+ [ ! -f "/usr/share/ucitrack/luci-app-netwizard.json" ] && {
+     cat > /usr/share/ucitrack/luci-app-netwizard.json << EEOF
+ {
