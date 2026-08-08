@@ -587,17 +587,30 @@ jobs:
         run: |
           set -euo pipefail
 
-          # PassWall main 当前使用旧归档哈希，而 OpenWrt 25.12 对同一固定 Git
-          # 提交的可复现归档会生成另一个哈希。只接受这两个已知值，避免关闭校验。
+          # PassWall 的归档型软件包可能使用旧哈希，而 OpenWrt 25.12 对同一固定 Git
+          # 提交的可复现归档会生成另一个哈希。内置源码包无需哈希，其余情况只接受已知值。
           fix_passwall_hash() {
             local package_name="$1"
             local upstream_hash="$2"
             local openwrt_2512_hash="$3"
-            local package_makefile="openwrt/feeds/passwall_packages/$package_name/Makefile"
+            local package_dir="openwrt/feeds/passwall_packages/$package_name"
+            local package_makefile="$package_dir/Makefile"
             local current_hash
 
             if [ ! -f "$package_makefile" ]; then
               echo "::error::未找到 PassWall 软件包配置: $package_makefile"
+              exit 1
+            fi
+
+            if ! grep -q '^PKG_MIRROR_HASH:=' "$package_makefile"; then
+              if [ -d "$package_dir/src" ] &&
+                 [ -n "$(find "$package_dir/src" -mindepth 1 -print -quit)" ] &&
+                 ! grep -q '^PKG_SOURCE' "$package_makefile"; then
+                echo "✅ $package_name 使用仓库内置源码，无需修复下载哈希"
+                return
+              fi
+
+              echo "::error::$package_name 未声明下载哈希，且未检测到有效的内置源码结构"
               exit 1
             fi
 

@@ -379,18 +379,31 @@ fi
 
 if [ "$SOURCE_BRANCH:$REPO_BRANCH" = "openwrt-main:openwrt-25.12" ] &&
    plugin_selected luci-app-passwall; then
-  echo "🩹 检查本机生成的PassWall源码归档哈希..."
+  echo "🩹 检查PassWall源码类型与本机归档哈希..."
   align_passwall_hash_with_cache() {
     local package_name="$1"
     local archive_name="$2"
     local approved_hash_a="$3"
     local approved_hash_b="$4"
-    local package_makefile="$OPENWRT_DIR/feeds/passwall_packages/$package_name/Makefile"
+    local package_dir="$OPENWRT_DIR/feeds/passwall_packages/$package_name"
+    local package_makefile="$package_dir/Makefile"
     local archive_file="$CACHE_ROOT/dl/$archive_name"
     local current_hash cached_hash
 
     if [ ! -f "$package_makefile" ]; then
       echo "错误：未找到PassWall软件包配置: $package_makefile" >&2
+      exit 1
+    fi
+
+    if ! grep -q '^PKG_MIRROR_HASH:=' "$package_makefile"; then
+      if [ -d "$package_dir/src" ] &&
+         [ -n "$(find "$package_dir/src" -mindepth 1 -print -quit)" ] &&
+         ! grep -q '^PKG_SOURCE' "$package_makefile"; then
+        echo "✅ $package_name 使用仓库内置源码，无需校准下载哈希"
+        return
+      fi
+
+      echo "错误：$package_name 未声明下载哈希，且未检测到有效的内置源码结构" >&2
       exit 1
     fi
 
