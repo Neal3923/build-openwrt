@@ -636,10 +636,8 @@ jobs:
             shadowsocksr-libev \
             146fa4511a52da2aaa1e11ea0294cfb450e62643156c5da3b10e037ef43961f6 \
             42dab453a7d8b3737109110083513467bad1cf71a0aaf671452595797b2b59b0
-          fix_passwall_hash \
-            simple-obfs \
-            bc97eba511b86a089ab4bcf0ac78d9e4a39c59046d5cde77b79a118245daa0ba \
-            b06d72a973de85fd2d45542f436e4aab5d96de6c78f4f0b9f6697e1730d1d211
+
+          # simple-obfs 当前的上游哈希与 OpenWrt 25.12 生成结果一致，必须保留原值。
       - name: 📦 安装feeds
         run: |
           set -euo pipefail
