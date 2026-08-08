@@ -534,6 +534,7 @@ jobs:
           verify_pinned_feed passwall_packages
           verify_pinned_feed passwall
           verify_pinned_feed netwizard
+          bash "$GITHUB_WORKSPACE/script/patch-netwizard-docker-firewall.sh" "$PWD"
           echo "✅ feeds更新完成"
 
       - name: 🎨 安装 Argon 独立源码包
